@@ -1,0 +1,15 @@
+{
+  "name": "ffa-suite",
+  "version": "0.0.1",
+  "scripts": {
+    "build:types": "tsc --noEmit",
+    "build": "npm run build:types"
+  },
+  "description": "Free for all plugin suite for OpenRCT2 multiplayer",
+  "main": "lib/ownership.js",
+  "author": "Cory Sanin",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "typescript": "4.0.2"
+  }
+}
