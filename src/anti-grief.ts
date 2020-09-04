@@ -36,14 +36,6 @@ function antiGriefMain() {
                     network.sendMessage(e.result.errorMessage, [e.player]);
                 }
             }
-
-            if (e.player === -1) {
-                e.result = {
-                    error: 1,
-                    errorTitle: 'NO PLAYER INDEX',
-                    errorMessage: `Player is ${e.player}`
-                }
-            }
         });
 
         context.subscribe('interval.tick', (e) => {
@@ -57,7 +49,7 @@ function antiGriefMain() {
 
 function doesRideHaveExitPath(rideId) {
     var ride = map.getRide(rideId);
-    if(ride.classification !== 'ride'){
+    if (ride.classification !== 'ride') {
         return true;
     }
     var stations = ride.stations;
