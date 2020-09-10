@@ -17,7 +17,7 @@ Kicks players for performing too many griefy actions too quickly.
 
 ## ffa-cheat-toggle
 
-Toggles 3 cheats on launch (disable vandilism, plants don't age, and disable all breakdowns), and keeps grass clear.
+Toggles 4 cheats on launch (disable vandilism, plants don't age, disable all breakdowns, and ride value doesn't decrease), and keeps grass clear.
 
 ## ffa-individual-economy
 

@@ -37,6 +37,8 @@ function individualEconMain() {
 
         context.subscribe('action.execute', (e) => {
             if (e.player !== -1) {
+                var player = e.player;
+
                 // add/remove rides from player arrays
                 // @ts-ignore
                 if (e.action === 'ridecreate' &&
@@ -46,12 +48,12 @@ function individualEconMain() {
                 // @ts-ignore
                 else if (e.action === 'ridedemolish' &&
                     'ride' in e.args) {
-                    removeRide(e.args['ride']);
+                    player = getPlayerFromHash(removeRide(e.args['ride']));
                 }
 
                 // deduct the money
                 if ('cost' in e.result) {
-                    spendMoney(e.player, e.result.cost);
+                    spendMoney(player, e.result.cost);
                 }
             }
         });
@@ -68,8 +70,14 @@ function getPlayer(playerID: number): Player {
     if (playerID === -1) {
         return null;
     }
-    var player = network.getPlayer(playerID);
-    if (!(player.publicKeyHash in playerProfiles)) {
+    var player = null; //network.getPlayer(playerID);
+    var players = network.players;
+    for (var i = 0; i < players.length; i++) {
+        if (players[i].id === playerID) {
+            player = players[i];
+        }
+    }
+    if (player && !(player.publicKeyHash in playerProfiles)) {
         playerProfiles[player.publicKeyHash] = {
             moneySpent: 0,
             ridesCreated: []
@@ -90,8 +98,10 @@ function getPlayerCash(playerID: number): number {
     var player = getPlayer(playerID);
     var cash = initialDollars - playerProfiles[player.publicKeyHash].moneySpent;
     for (var i = 0; i < playerProfiles[player.publicKeyHash].ridesCreated.length; i++) {
+        var ride = map.getRide(playerProfiles[player.publicKeyHash].ridesCreated[i]);
         // @ts-ignore
-        cash += map.getRide(playerProfiles[player.publicKeyHash].ridesCreated[i]).totalProfit;
+        cash += Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
+        // Don't subtract funds if it's a bathroom 🚽
     }
     return cash;
 }
@@ -104,13 +114,24 @@ function addRide(playerID: number, rideID: number) {
     rideCreators[rideID] = player.publicKeyHash;
 }
 
-function removeRide(rideID: number) {
+function removeRide(rideID: number): string {
     var playerHash = rideCreators[rideID];
     var index = playerProfiles[playerHash].ridesCreated.indexOf(rideID);
     if (index !== -1) {
         playerProfiles[playerHash].ridesCreated.splice(index, 1);
     }
     delete rideCreators[rideID];
+    return playerHash;
+}
+
+function getPlayerFromHash(hash: string): number {
+    var players = network.players;
+    for (var i = 0; i < players.length; i++) {
+        if (players[i].publicKeyHash === hash) {
+            return players[i].id;
+        }
+    }
+    return -1;
 }
 
 // @ts-ignore

@@ -12,9 +12,12 @@ function enableCheats() {
         //disable all breakdowns
         setCheatAction(9);
 
-        //clear grass every 500 ticks
+        //Rides don't decrease in value over time (useful for ffa-individual-economy)
+        setCheatAction(44);
+
+        //clear grass every 1000 ticks
         context.subscribe('interval.tick', () => {
-            if (date.ticksElapsed % 500 === 0) {
+            if (date.ticksElapsed % 1000 === 0) {
                 setCheatAction(24);
             }
         });
