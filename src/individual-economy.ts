@@ -3,6 +3,8 @@
 
 interface PlayerProfile {
     moneySpent: number,
+    name: string,
+    previousTotalProfit: number
     ridesCreated: number[]
 }
 
@@ -10,15 +12,24 @@ interface PlayerProfiles {
     [publicKeyHash: string]: PlayerProfile
 }
 
+interface RideProperty {
+    authorHash: string,
+    previousTotalProfit: number
+}
+
+interface RideProperties {
+    [rideID: number]: RideProperty
+}
+
 const MINIMUM_STARTING_DOLLARS = 10000;
 var initialDollars: number;
 var playerProfiles: PlayerProfiles;
-var rideCreators: object;
+var rideProperties: RideProperties;
 
 function individualEconMain() {
     if (network.mode === 'server') {
         playerProfiles = {};
-        rideCreators = {};
+        rideProperties = {};
         initialDollars = Math.max(MINIMUM_STARTING_DOLLARS, park.cash);
         context.subscribe('action.query', (e) => {
             // check if player has the CASH MONEY
@@ -37,7 +48,7 @@ function individualEconMain() {
 
         context.subscribe('action.execute', (e) => {
             if (e.player !== -1) {
-                var player = e.player;
+                var player: number | string = e.player;
 
                 // add/remove rides from player arrays
                 // @ts-ignore
@@ -48,7 +59,7 @@ function individualEconMain() {
                 // @ts-ignore
                 else if (e.action === 'ridedemolish' &&
                     'ride' in e.args) {
-                    player = getPlayerFromHash(removeRide(e.args['ride']));
+                    player = removeRide(e.args['ride']);
                 }
 
                 // deduct the money
@@ -58,52 +69,148 @@ function individualEconMain() {
             }
         });
 
+        context.subscribe('interval.day', (e) => {
+            if (date.day === 1) {
+                var mostProfitableTotal = {
+                    name: '',
+                    profit: 0
+                };
+
+                var mostProfitableAverage = {
+                    name: '',
+                    profit: 0
+                };
+
+                var mostProfitableRide = {
+                    name: '',
+                    author: '',
+                    profit: 0
+                };
+
+                for (const playerHash in playerProfiles) {
+                    var profit = getProfitDifference(playerHash);
+                    var aveProfit = Math.floor(profit / playerProfiles[playerHash].ridesCreated.length);
+                    if (profit > mostProfitableTotal.profit) {
+                        mostProfitableTotal = {
+                            name: playerProfiles[playerHash].name,
+                            profit
+                        };
+                    }
+                    if (aveProfit > mostProfitableAverage.profit) {
+                        mostProfitableAverage = {
+                            name: playerProfiles[playerHash].name,
+                            profit: aveProfit
+                        };
+                    }
+                }
+
+                for (var ride of map.rides) {
+                    var profit = getRideProfitDifference(ride.id);
+                    if (profit > mostProfitableRide.profit) {
+                        mostProfitableRide = {
+                            name: ride.name,
+                            author: playerProfiles[rideProperties[ride.id].authorHash].name,
+                            profit
+                        };
+                    }
+                }
+
+                if (mostProfitableTotal.profit > 0) {
+                    network.sendMessage(`This month's tycoon is ${mostProfitableTotal.name}! They made a total of ${mostProfitableTotal.profit}.`);
+                }
+                if (mostProfitableAverage.profit > 0) {
+                    network.sendMessage(`This month's quality ride expert is ${mostProfitableAverage.name}! They're average profit per ride was ${mostProfitableAverage.profit}.`);
+                }
+                if (mostProfitableRide.profit > 0) {
+                    network.sendMessage(`This month's most profitable ride is ${mostProfitableRide.name} by ${mostProfitableRide.author}!`);
+                }
+            }
+        });
+
         context.subscribe('network.chat', (e) => {
             if (e.message.toLowerCase() === '!cash') {
                 network.sendMessage(`Your current balance is ${getPlayerCash(e.player)}`, [e.player]);
             }
-        })
+        });
     }
 }
 
+// @ts-ignore
 function getPlayer(playerID: number): Player {
     if (playerID === -1) {
         return null;
     }
-    var player = null; //network.getPlayer(playerID);
+    var player: Player = null; //network.getPlayer(playerID);
     var players = network.players;
-    for (var i = 0; i < players.length; i++) {
-        if (players[i].id === playerID) {
-            player = players[i];
+    for (const p of players) {
+        if (p.id === playerID) {
+            player = p;
         }
     }
     if (player && !(player.publicKeyHash in playerProfiles)) {
         playerProfiles[player.publicKeyHash] = {
             moneySpent: 0,
+            name: player.name,
+            previousTotalProfit: 0,
             ridesCreated: []
         }
         setCheatAction(16, initialDollars);
         network.sendMessage(`This server uses ffa-individual-economy. You currently have a balance of ${initialDollars} to build with.`, [playerID]);
         network.sendMessage(`To see your balance at any time, say \`!cash\` in chat.`, [playerID]);
     }
+    else if (player) {
+        playerProfiles[player.publicKeyHash].name = player.name;
+    }
     return player;
 }
 
-function spendMoney(playerID: number, cost: number) {
-    var player = getPlayer(playerID);
-    playerProfiles[player.publicKeyHash].moneySpent += cost;
+// @ts-ignore
+function getRide(rideID: number): Ride {
+    if (rideID === -1) {
+        return null;
+    }
+    var ride: Ride = null;
+    var rides = map.rides;
+    for (const r of rides) {
+        if (r.id === rideID) {
+            ride = r;
+        }
+    }
+    return ride;
+}
+
+function spendMoney(player: number | string, cost: number) {
+    playerProfiles[(typeof player === 'number') ? getPlayer(player).publicKeyHash : player].moneySpent += cost;
 }
 
 function getPlayerCash(playerID: number): number {
     var player = getPlayer(playerID);
-    var cash = initialDollars - playerProfiles[player.publicKeyHash].moneySpent;
-    for (var i = 0; i < playerProfiles[player.publicKeyHash].ridesCreated.length; i++) {
-        var ride = map.getRide(playerProfiles[player.publicKeyHash].ridesCreated[i]);
+    return initialDollars - playerProfiles[player.publicKeyHash].moneySpent + getPlayerProfit(player.publicKeyHash);
+}
+
+function getPlayerProfit(playerHash: string): number {
+    var profit = 0;
+    for (const rideID of playerProfiles[playerHash].ridesCreated) {
+        var ride = getRide(rideID);
         // @ts-ignore
-        cash += Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
+        profit += Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
         // Don't subtract funds if it's a bathroom 🚽
     }
-    return cash;
+    return profit;
+}
+
+function getProfitDifference(playerHash: string): number {
+    var profit = getPlayerProfit(playerHash);
+    var previous = playerProfiles[playerHash].previousTotalProfit;
+    playerProfiles[playerHash].previousTotalProfit = profit;
+    return profit - previous;
+}
+
+function getRideProfitDifference(rideID: number): number {
+    var profit = getRide(rideID).totalProfit;
+    var previous = rideProperties[rideID].previousTotalProfit;
+    rideProperties[rideID].previousTotalProfit = profit;
+    return profit - previous;
 }
 
 function addRide(playerID: number, rideID: number) {
@@ -111,27 +218,20 @@ function addRide(playerID: number, rideID: number) {
     if (playerProfiles[player.publicKeyHash].ridesCreated.indexOf(rideID) === -1) {
         playerProfiles[player.publicKeyHash].ridesCreated.push(rideID);
     }
-    rideCreators[rideID] = player.publicKeyHash;
+    rideProperties[rideID] = {
+        authorHash: player.publicKeyHash,
+        previousTotalProfit: 0
+    };
 }
 
 function removeRide(rideID: number): string {
-    var playerHash = rideCreators[rideID];
+    var playerHash = rideProperties[rideID].authorHash;
     var index = playerProfiles[playerHash].ridesCreated.indexOf(rideID);
     if (index !== -1) {
         playerProfiles[playerHash].ridesCreated.splice(index, 1);
     }
-    delete rideCreators[rideID];
+    delete rideProperties[rideID];
     return playerHash;
-}
-
-function getPlayerFromHash(hash: string): number {
-    var players = network.players;
-    for (var i = 0; i < players.length; i++) {
-        if (players[i].publicKeyHash === hash) {
-            return players[i].id;
-        }
-    }
-    return -1;
 }
 
 // @ts-ignore

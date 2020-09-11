@@ -2,7 +2,7 @@
 // uses OPENRCT2_PLUGIN_API_VERSION = 1
 
 const NEGATIVE_ACTIONS: (string | number)[] = [6, 19, 15, 42, 44, 51];
-const TICK_COOLDOWN = 12;
+const TICK_COOLDOWN = 15;
 const MAX_STRIKES = 5;
 const STRIKE_COOLDOWN = 300;
 
@@ -16,34 +16,36 @@ function rateLimitMain() {
     if (network.mode === 'server') {
         context.subscribe('action.query', (e) => {
             if (NEGATIVE_ACTIONS.indexOf(e.type) !== -1 && e.player >= 0) {
-                var player = network.getPlayer(e.player);
-                var lastTick = 0;
-                var currentTick = date.ticksElapsed;
-                if (player.publicKeyHash in negativeActionTicks) {
-                    lastTick = negativeActionTicks[player.publicKeyHash];
-                }
-                negativeActionTicks[player.publicKeyHash] = currentTick;
+                var player = getPlayer(e.player);
+                if (!isPlayerAdmin(player)) {
+                    var lastTick = 0;
+                    var currentTick = date.ticksElapsed;
+                    if (player.publicKeyHash in negativeActionTicks) {
+                        lastTick = negativeActionTicks[player.publicKeyHash];
+                    }
+                    negativeActionTicks[player.publicKeyHash] = currentTick;
 
-                if (currentTick - lastTick < TICK_COOLDOWN) {
-                    //Too fast!
-                    var strikes = 0;
-                    if (player.publicKeyHash in numberOfOffenses) {
-                        strikes = numberOfOffenses[player.publicKeyHash];
+                    if (currentTick - lastTick < TICK_COOLDOWN) {
+                        //Too fast!
+                        var strikes = 0;
+                        if (player.publicKeyHash in numberOfOffenses) {
+                            strikes = numberOfOffenses[player.publicKeyHash];
+                        }
+                        strikes += 1;
+                        e.result = {
+                            error: 1,
+                            errorTitle: 'TOO FAST',
+                            errorMessage: 'You are being rate limited'
+                        };
+                        if (strikes >= MAX_STRIKES) {
+                            network.kickPlayer(e.player);
+                            strikes += MAX_STRIKES;
+                        }
+                        else {
+                            network.sendMessage('ATTENTION: You are going too fast! Slow down before performing your next action.', [e.player]);
+                        }
+                        numberOfOffenses[player.publicKeyHash] = strikes;
                     }
-                    strikes += 1;
-                    e.result = {
-                        error: 1,
-                        errorTitle: 'TOO FAST',
-                        errorMessage: 'You are being rate limited'
-                    };
-                    if (strikes >= MAX_STRIKES) {
-                        network.kickPlayer(e.player);
-                        strikes += MAX_STRIKES;
-                    }
-                    else {
-                        network.sendMessage('ATTENTION: You are going too fast! Slow down before performing your next action.', [e.player]);
-                    }
-                    numberOfOffenses[player.publicKeyHash] = strikes;
                 }
             }
         });
@@ -61,9 +63,9 @@ function rateLimitMain() {
                     }
                 }
             }
-            else if(currentTick % STRIKE_COOLDOWN === Math.floor(STRIKE_COOLDOWN / 2)){
+            else if (currentTick % STRIKE_COOLDOWN === Math.floor(STRIKE_COOLDOWN / 2)) {
                 for (const playerhash in negativeActionTicks) {
-                    if(currentTick - negativeActionTicks[playerhash] > STRIKE_COOLDOWN){
+                    if (currentTick - negativeActionTicks[playerhash] > STRIKE_COOLDOWN) {
                         delete negativeActionTicks[playerhash];
                     }
                 }
@@ -81,6 +83,21 @@ function doNothing() {
 function isPlayerAdmin(player: Player) {
     var perms: string[] = network.getGroup(player.group).permissions;
     return perms.indexOf('kick_player') >= 0;
+}
+
+// @ts-ignore
+function getPlayer(playerID: number): Player {
+    if (playerID === -1) {
+        return null;
+    }
+    var player: Player = null; //network.getPlayer(playerID);
+    var players = network.players;
+    for (const p of players) {
+        if (p.id === playerID) {
+            player = p;
+        }
+    }
+    return player;
 }
 
 registerPlugin({

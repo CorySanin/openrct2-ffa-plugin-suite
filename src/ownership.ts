@@ -15,7 +15,7 @@ function ownershipMain() {
             // @ts-ignore
             if (e.action !== 'ridecreate') {
                 if ('ride' in e.args && e.player >= 0 && e.player < network.numPlayers) {
-                    if (rideOwners[e.args['ride']] !== network.getPlayer(e.player).publicKeyHash && !isPlayerAdmin(network.getPlayer(e.player))) {
+                    if (rideOwners[e.args['ride']] !== getPlayer(e.player).publicKeyHash && !isPlayerAdmin(getPlayer(e.player))) {
                         e.result = {
                             error: 1,
                             errorTitle: 'NOT OWNED',
@@ -44,8 +44,8 @@ function ownershipMain() {
                 }
 
                 if (e.player >= 0 && e.player < network.numPlayers) {
-                    var ride = map.getRide(e.result['ride']);
-                    var player = network.getPlayer(e.player);
+                    var ride = getRide(e.result['ride']);
+                    var player = getPlayer(e.player);
                     rideOwners[ride.id] = player.publicKeyHash;
 
                     setName(`${player.name} ${ride.name.replace(/[0-9]/g, '').trim()}`, 1);
@@ -68,6 +68,36 @@ function doNothing() {
 function isPlayerAdmin(player: Player) {
     var perms: string[] = network.getGroup(player.group).permissions;
     return perms.indexOf('kick_player') >= 0;
+}
+
+// @ts-ignore
+function getPlayer(playerID: number): Player {
+    if (playerID === -1) {
+        return null;
+    }
+    var player: Player = null; //network.getPlayer(playerID);
+    var players = network.players;
+    for (const p of players) {
+        if (p.id === playerID) {
+            player = p;
+        }
+    }
+    return player;
+}
+
+// @ts-ignore
+function getRide(rideID: number): Ride {
+    if (rideID === -1) {
+        return null;
+    }
+    var ride: Ride = null;
+    var rides = map.rides;
+    for (const r of rides) {
+        if (r.id === rideID) {
+            ride = r;
+        }
+    }
+    return ride;
 }
 
 registerPlugin({

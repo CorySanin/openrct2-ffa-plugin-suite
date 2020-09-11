@@ -18,7 +18,7 @@ function antiGriefMain() {
                         errorTitle: 'NO EXIT',
                         errorMessage: 'Ride has no exit path.'
                     }
-                    network.sendMessage(`ERROR: ${map.getRide(e.args['ride']).name} has no path leading from its exit!`, [e.player]);
+                    network.sendMessage(`ERROR: ${getRide(e.args['ride']).name} has no path leading from its exit!`, [e.player]);
                 }
             }
             /**
@@ -38,9 +38,14 @@ function antiGriefMain() {
             }
         });
 
+        // context.subscribe('action.execute', (e) => {
+        //     if(e.action === 'peeppickup')
+        //         console.log(e);
+        // });
+
         context.subscribe('interval.tick', (e) => {
             //needs work
-            // if (date.ticksElapsed % 100 === 0) {
+            // if (date.ticksElapsed % 50 === 0) {
             //     relocateLostGuests();
             // }
         });
@@ -48,7 +53,7 @@ function antiGriefMain() {
 }
 
 function doesRideHaveExitPath(rideId) {
-    var ride = map.getRide(rideId);
+    var ride = getRide(rideId);
     if (ride.classification !== 'ride') {
         return true;
     }
@@ -92,8 +97,8 @@ function doesExitUsePath(position) {
             if (elements[k].type === 'entrance' && 'isQueue' in elements[k] && !elements[k]['isQueue']) {
                 for (var j = 0; j < 2; j++) {
                     if (elements[k].baseHeight === pathCoords.z + (j * 2)
-                        && map.getRide(elements[k]['ride']).status === 'open') {
-                        return map.getRide(elements[k]['ride']);
+                        && getRide(elements[k]['ride']).status === 'open') {
+                        return getRide(elements[k]['ride']);
                     }
                 }
             }
@@ -108,16 +113,16 @@ function relocateLostGuests() {
         var elements = map.getTile(Math.floor(peep.x / TILEWIDTH), Math.floor(peep.y / TILEWIDTH)).elements;
         var pathIndex = -1;
         for (var i = 0; i < elements.length; i++) {
-            if (elements[i].type === 'footpath' && elements[i].baseHeight <= peep.z / SLABHEIGHT) {
+            if ((elements[i].type === 'footpath' || elements[i].type === 'entrance' || elements[i].type === 'track') && elements[i].baseHeight <= peep.z / SLABHEIGHT) {
                 pathIndex = i;
             }
         }
-        if (pathIndex === -1) {
+        if (elements.length !== 0 && pathIndex === -1) {
             console.log(`peep ${peep.name} is lost.`);
-            console.log(peep);
-            console.log(`slowWalk: ${peep.getFlag('slowWalk')}`);
-            console.log(`tracking: ${peep.getFlag('tracking')}`);
-            console.log(`lost: ${peep.getFlag('lost')}`);
+            console.log(elements);
+            // context.executeAction('peeppickup', {
+            // //NO ARGS??????
+            // }, doNothing);
         }
     })
 }
@@ -126,6 +131,21 @@ function relocateLostGuests() {
 function isPlayerAdmin(player: Player) {
     var perms: string[] = network.getGroup(player.group).permissions;
     return perms.indexOf('kick_player') >= 0;
+}
+
+// @ts-ignore
+function getRide(rideID: number): Ride {
+    if (rideID === -1) {
+        return null;
+    }
+    var ride: Ride = null;
+    var rides = map.rides;
+    for (const r of rides) {
+        if (r.id === rideID) {
+            ride = r;
+        }
+    }
+    return ride;
 }
 
 registerPlugin({
