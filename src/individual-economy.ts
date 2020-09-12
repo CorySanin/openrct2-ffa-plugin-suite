@@ -105,13 +105,15 @@ function individualEconMain() {
                 }
 
                 for (var ride of map.rides) {
-                    var profit = getRideProfitDifference(ride.id);
-                    if (profit > mostProfitableRide.profit) {
-                        mostProfitableRide = {
-                            name: ride.name,
-                            author: playerProfiles[rideProperties[ride.id].authorHash].name,
-                            profit
-                        };
+                    if (ride.id in rideProperties) {
+                        var profit = getRideProfitDifference(ride.id);
+                        if (profit > mostProfitableRide.profit) {
+                            mostProfitableRide = {
+                                name: ride.name,
+                                author: playerProfiles[rideProperties[ride.id].authorHash].name,
+                                profit
+                            };
+                        }
                     }
                 }
 
