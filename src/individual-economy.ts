@@ -22,6 +22,38 @@ interface RideProperties {
 }
 
 const MINIMUM_STARTING_DOLLARS = 10000;
+const buildActions = [
+    'bannerplace',
+    'bannerremove',
+    'clearscenery',
+    'footpathplace',
+    'footpathplacefromtrack',
+    'foothpathremove',
+    'footpathsceneryplace',
+    'footpathsceneryremove',
+    'landbuyrights',
+    'landlower',
+    'landraise',
+    'largesceneryplace',
+    'largesceneryremove',
+    'mazeplacetrack',
+    'mazesettrack',
+    'parkmarketing',
+    'parksetloan',
+    'ridecreate',
+    'ridedemolish',
+    'smallsceneryplace',
+    'smallsceneryremove',
+    'surfacesetstyle',
+    'tilemodify',
+    'trackdesign',
+    'trackplace',
+    'trackremove',
+    'wallplace',
+    'wallremove',
+    'waterlower',
+    'waterraise'
+];
 var initialDollars: number;
 var playerProfiles: PlayerProfiles;
 var rideProperties: RideProperties;
@@ -35,6 +67,9 @@ function individualEconMain() {
             // check if player has the CASH MONEY
             if ('cost' in e.result && e.result.cost >= 0 && e.player !== -1) {
                 var playerCash = getPlayerCash(e.player);
+                if (buildActions.indexOf(e.action) >= 0) {
+                    setCheatAction(17, playerCash);
+                }
                 if (playerCash < e.result.cost) {
                     network.sendMessage(`ERROR: Not enough cash to perform that action! It costs ${e.result.cost} and you have ${playerCash}`, [e.player]);
                     e.result = {
@@ -65,11 +100,17 @@ function individualEconMain() {
                 // deduct the money
                 if ('cost' in e.result) {
                     spendMoney(player, e.result.cost);
+                    if (buildActions.indexOf(e.action) >= 0) {
+                        setCheatAction(17, getPlayerCash(e.player));
+                    }
                 }
             }
         });
 
         context.subscribe('interval.day', (e) => {
+            if (park.cash <= 0){
+                setCheatAction(17, initialDollars);
+            }
             if (date.day === 1) {
                 var mostProfitableTotal = {
                     name: '',
@@ -156,7 +197,6 @@ function getPlayer(playerID: number): Player {
             previousTotalProfit: 0,
             ridesCreated: []
         }
-        setCheatAction(16, initialDollars);
         network.sendMessage(`This server uses ffa-individual-economy. You currently have a balance of ${initialDollars} to build with.`, [playerID]);
         network.sendMessage(`To see your balance at any time, say \`!cash\` in chat.`, [playerID]);
     }
