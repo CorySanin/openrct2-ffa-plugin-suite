@@ -1,24 +1,28 @@
 /// <reference path="../../../bin/openrct2.d.ts" />
 // uses OPENRCT2_PLUGIN_API_VERSION = 1
 
+
 function enableCheats() {
     if (network.mode === 'server') {
         //disable vandalism (by the guests, anyway 🙄)
         setCheatAction(13);
 
         //disable plants aging
-        setCheatAction(26);
+        setCheatAction(25);
 
         //disable all breakdowns
         setCheatAction(9);
 
-        //Rides don't decrease in value over time (useful for ffa-individual-economy)
+        //rides don't decrease in value over time (useful for ffa-individual-economy)
+        setCheatAction(43);
+
+        //unlock all rides
         setCheatAction(44);
 
         //clear grass every 1000 ticks
         context.subscribe('interval.tick', () => {
             if (date.ticksElapsed % 1000 === 0) {
-                setCheatAction(24);
+                setCheatAction(23);
             }
         });
     }
