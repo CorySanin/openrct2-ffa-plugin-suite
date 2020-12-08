@@ -52,7 +52,7 @@ function ownershipMain() {
                 }
             }
             // @ts-ignore
-            else if (e.action === 'ridedemolish' && 'ride' in e.args) {
+            else if (e.action === 'ridedemolish' && 'ride' in e.args && (!('modifyType' in e.args) || e.args['modifyType'] === 0)) {
                 delete rideOwners[e.args['ride']];
             }
         });
