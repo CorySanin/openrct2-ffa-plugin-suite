@@ -18,7 +18,7 @@ function antiGriefMain() {
                         errorTitle: 'NO EXIT',
                         errorMessage: 'Ride has no exit path.'
                     }
-                    network.sendMessage(`ERROR: ${getRide(e.args['ride']).name} has no path leading from its exit!`, [e.player]);
+                    network.sendMessage(`{RED}ERROR: {WHITE}${getRide(e.args['ride']).name} has no path leading from its exit!`, [e.player]);
                 }
             }
             /**
@@ -33,7 +33,7 @@ function antiGriefMain() {
                         errorTitle: 'EXIT NEEDS PATH',
                         errorMessage: `${rideUsesPath.name} must be closed before removing that path.`,
                     }
-                    network.sendMessage(e.result.errorMessage, [e.player]);
+                    network.sendMessage(`{RED}ERROR: {WHITE}${e.result.errorMessage}`, [e.player]);
                 }
             }
         });
@@ -95,10 +95,15 @@ function doesExitUsePath(position) {
         var elements = map.getTile(checkExitCoords.x, checkExitCoords.y).elements;
         for (var k = 0; k < elements.length; k++) {
             if (elements[k].type === 'entrance' && 'isQueue' in elements[k] && !elements[k]['isQueue']) {
-                for (var j = 0; j < 2; j++) {
-                    if (elements[k].baseHeight === pathCoords.z + (j * 2)
-                        && getRide(elements[k]['ride']).status === 'open') {
-                        return getRide(elements[k]['ride']);
+                let entrance = elements[k] as EntranceElement;
+                if (pathCoords.x === checkExitCoords.x + (entrance.direction + 1) % 2 * (entrance.direction - 1) * -1
+                    && pathCoords.y === checkExitCoords.y + entrance.direction % 2 * (entrance.direction - 2)) {
+                    for (var j = 0; j < 2; j++) {
+                        let ride;
+                        if (elements[k].baseHeight === pathCoords.z + (j * 2)
+                            && (ride = getRide(elements[k]['ride'])).status === 'open') {
+                            return ride;
+                        }
                     }
                 }
             }
