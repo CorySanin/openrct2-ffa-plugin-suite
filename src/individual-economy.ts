@@ -71,6 +71,11 @@ function individualEconMain() {
         playerProfiles = {};
         rideProperties = {};
         initialDollars = Math.max(MINIMUM_STARTING_DOLLARS, park.cash);
+
+        context.subscribe('network.join', (e) => {
+            context.setTimeout(() => network.sendMessage(`{NEWLINE}{YELLOW}This server uses ffa-individual-economy.{NEWLINE}To see your balance at any time, say \`{WHITE}!cash{YELLOW}\` in chat.`, [e.player]), 1000);
+        });
+
         context.subscribe('action.query', (e) => {
             // check if player has the CASH MONEY
             if ('cost' in e.result && e.result.cost >= 0 && e.player !== -1) {
