@@ -54,6 +54,11 @@ const buildActions = [
     'waterlower',
     'waterraise'
 ];
+const PREFIX = new RegExp('^(!|/)');
+const CMDHELP = new RegExp('^help($| )', 'i');
+const CMDCASH = new RegExp('^cash($| )', 'i');
+const CMDTRANSFER = new RegExp('^(transfer|give|send)($| )', 'i');
+
 var initialDollars: number;
 var playerProfiles: PlayerProfiles;
 var rideProperties: RideProperties;
@@ -65,6 +70,31 @@ if (typeof context.setTimeout !== 'function') {
         return -1;
     }
 }
+
+function getCommand(str): boolean | string {
+    if (str.match(PREFIX)) {
+        return str.replace(PREFIX, '').trim();
+    }
+    return false;
+}
+
+function doesCommandMatch(str, commands): boolean | string {
+    for (const command of commands) {
+        if (typeof command === 'string') {
+            if (str.startsWith(command)) {
+                let ret = str.substring(command.length, str.length).trim();
+                return (ret) ? ret : true;
+            }
+        }
+        else {
+            if (str.match(command)) {
+                return str.replace(command, '').trim();
+            }
+        }
+    }
+    return false;
+}
+
 
 function individualEconMain() {
     if (network.mode === 'server') {
@@ -99,12 +129,10 @@ function individualEconMain() {
                 var player: number | string = e.player;
 
                 // add/remove rides from player arrays
-                // @ts-ignore
                 if (e.action === 'ridecreate' &&
                     'ride' in e.result) {
                     addRide(e.player, e.result['ride']);
                 }
-                // @ts-ignore
                 else if (e.action === 'ridedemolish' &&
                     'ride' in e.args) {
                     player = removeRide(e.args['ride']);
@@ -187,9 +215,55 @@ function individualEconMain() {
         });
 
         context.subscribe('network.chat', (e) => {
-            let msg = e.message.toLowerCase();
-            if (msg === '!cash' || msg === '/cash') {
-                context.setTimeout(() => network.sendMessage(`{TOPAZ}Your current balance is {WHITE}${getPlayerCash(e.player)}`, [e.player]), 100);
+            let msg = e.message;
+            let outmsg: string, args: any, command = getCommand(msg);
+            if (command !== false) {
+
+                if ((args = doesCommandMatch(command, [CMDCASH])) !== false) {
+                    outmsg = `{TOPAZ}Your current balance is {WHITE}${getPlayerCash(e.player)}`;
+                }
+                else if ((args = doesCommandMatch(command, [CMDTRANSFER])) !== false) {
+                    args = args.split(' ');
+                    if (args.length === 2) {
+                        let recipient: number = null;
+                        network.players.every(p => {
+                            if (p.name === args[0]) {
+                                recipient = p.id;
+                                return false;
+                            }
+                            else {
+                                return true
+                            }
+                        });
+                        if (recipient === null || !sendMoney(e.player, recipient, Math.max(0, Math.floor(parseInt(args[1]))))) {
+                            outmsg = `{RED}ERROR: {WHITE}could not transfer money. Make sure the recipient is online and the amount is less than ${Math.max(0, getPlayerCash(e.player) - initialDollars)}`;
+                        }
+                    }
+                    else {
+                        command = 'help transfer';
+                    }
+                }
+                if ((args = doesCommandMatch(command, [CMDHELP])) !== false) {
+                    console.log(args);
+                    let subargs;
+                    if ((subargs = doesCommandMatch(args, [CMDHELP])) !== false) {
+                        outmsg = '{NEWLINE}{YELLOW}help{NEWLINE}{WHITE}!help displays a list of commands that can be used.'
+                            + '{NEWLINE}{YELLOW}help [command]{NEWLINE}{WHITE}Specifying a command will display a help message for that command.';
+                    }
+                    else if ((subargs = doesCommandMatch(args, [CMDCASH])) !== false) {
+                        outmsg = '{NEWLINE}{YELLOW}cash{NEWLINE}{WHITE}!cash displays how much money you have.';
+                    }
+                    else if ((subargs = doesCommandMatch(args, [CMDTRANSFER])) !== false) {
+                        outmsg = `{NEWLINE}{YELLOW}transfer [player] [amount]{NEWLINE}{WHITE}!transfer transfers money from your own balance to another player. You must have more than ${initialDollars} (the starting cash) to transfer any amount.`;
+                    }
+                    else {
+                        outmsg = '{NEWLINE}{YELLOW}The following commands are available:{NEWLINE}{WHITE}help{NEWLINE}cash{NEWLINE}transfer';
+                    }
+                }
+
+                if (outmsg) {
+                    context.setTimeout(() => network.sendMessage(outmsg, [e.player]), 100);
+                }
             }
         });
     }
@@ -235,6 +309,15 @@ function getRide(rideID: number): Ride {
         }
     }
     return ride;
+}
+
+function sendMoney(sender: number, recipient: number, amount: number): boolean {
+    if(getPlayerCash(sender) - initialDollars >= amount){
+        spendMoney(sender, amount);
+        spendMoney(recipient, amount * -1);
+        return true;
+    }
+    return false
 }
 
 function spendMoney(player: number | string, cost: number) {
