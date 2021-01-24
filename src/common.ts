@@ -1,4 +1,4 @@
-/// <reference path="../../../bin/openrct2.d.ts" />
+/// <reference path="../types/openrct2.d.ts" />
 
 function isPlayerAdmin(player : Player){
     var perms : string[] = network.getGroup(player.group).permissions;

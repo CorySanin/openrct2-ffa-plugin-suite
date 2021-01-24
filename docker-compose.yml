@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+   openrct2:
+      image: corysanin/openrct2-cli:develop
+      ports:
+         - 11753:11753
+      volumes:
+         - ./lib:/home/openrct2/.config/OpenRCT2/plugin/ffa
+         - ./openrct2:/home/openrct2/.config/OpenRCT2
+      command:
+         - "host"
+         - "https://taunt.bot/rct/scenarios/?mode=money"

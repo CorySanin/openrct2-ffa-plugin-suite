@@ -1,4 +1,4 @@
-/// <reference path="../../../bin/openrct2.d.ts" />
+/// <reference path="../types/openrct2.d.ts" />
 // uses OPENRCT2_PLUGIN_API_VERSION = 1
 
 var rideOwners: object;

@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "scripts": {
     "build:types": "tsc --noEmit",
-    "build": "npm run build:types"
+    "build": "npm run build:types",
+    "gettypes": "curl https://raw.githubusercontent.com/OpenRCT2/OpenRCT2/develop/distribution/openrct2.d.ts > types/openrct2.d.ts"
   },
   "description": "Free for all plugin suite for OpenRCT2 multiplayer",
   "main": "lib/ownership.js",
