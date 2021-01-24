@@ -1,4 +1,4 @@
-/// <reference path="../../../bin/openrct2.d.ts" />
+/// <reference path="../types/openrct2.d.ts" />
 // uses OPENRCT2_PLUGIN_API_VERSION = 2
 
 interface PlayerProfile {
@@ -58,6 +58,14 @@ var initialDollars: number;
 var playerProfiles: PlayerProfiles;
 var rideProperties: RideProperties;
 
+// setTimeout polyfill
+if (typeof context.setTimeout !== 'function') {
+    context.setTimeout = function (callback, delay) {
+        callback();
+        return -1;
+    }
+}
+
 function individualEconMain() {
     if (network.mode === 'server') {
         playerProfiles = {};
@@ -71,7 +79,7 @@ function individualEconMain() {
                     setCheatAction(17, playerCash);
                 }
                 if (playerCash < e.result.cost) {
-                    network.sendMessage(`ERROR: Not enough cash to perform that action! It costs ${e.result.cost} and you have ${playerCash}`, [e.player]);
+                    network.sendMessage(`{RED}ERROR: Not enough cash to perform that action! It costs ${e.result.cost} and you have ${playerCash}`, [e.player]);
                     e.result = {
                         error: 1,
                         errorTitle: 'NOT ENOUGH CASH MONEY',
@@ -108,7 +116,7 @@ function individualEconMain() {
         });
 
         context.subscribe('interval.day', (e) => {
-            if (park.cash <= 0){
+            if (park.cash <= 0) {
                 setCheatAction(17, initialDollars);
             }
             if (date.day === 1) {
@@ -157,22 +165,26 @@ function individualEconMain() {
                         }
                     }
                 }
-
+                let sendmsg = '';
                 if (mostProfitableTotal.profit > 0) {
-                    network.sendMessage(`This month's tycoon is ${mostProfitableTotal.name}! They made a total of ${mostProfitableTotal.profit}.`);
+                    sendmsg += `{NEWLINE}{YELLOW}This month's quality ride expert is {WHITE}${mostProfitableAverage.name}{YELLOW}! They're average profit per ride was ${mostProfitableAverage.profit}.`;
                 }
                 if (mostProfitableAverage.profit > 0) {
-                    network.sendMessage(`This month's quality ride expert is ${mostProfitableAverage.name}! They're average profit per ride was ${mostProfitableAverage.profit}.`);
+                    sendmsg += `{NEWLINE}{YELLOW}This month's quality ride expert is {WHITE}${mostProfitableAverage.name}{YELLOW}! They're average profit per ride was ${mostProfitableAverage.profit}.`;
                 }
                 if (mostProfitableRide.profit > 0) {
-                    network.sendMessage(`This month's most profitable ride is ${mostProfitableRide.name} by ${mostProfitableRide.author}!`);
+                    sendmsg += `{NEWLINE}{YELLOW}This month's most profitable ride is {WHITE}${mostProfitableRide.name}{YELLOW} by {WHITE}${mostProfitableRide.author}{YELLOW}!`;
+                }
+                if (sendmsg != '') {
+                    network.sendMessage(sendmsg);
                 }
             }
         });
 
         context.subscribe('network.chat', (e) => {
-            if (e.message.toLowerCase() === '!cash') {
-                network.sendMessage(`Your current balance is ${getPlayerCash(e.player)}`, [e.player]);
+            let msg = e.message.toLowerCase();
+            if (msg === '!cash' || msg === '/cash') {
+                context.setTimeout(() => network.sendMessage(`{TOPAZ}Your current balance is {WHITE}${getPlayerCash(e.player)}`, [e.player]), 100);
             }
         });
     }
@@ -197,8 +209,7 @@ function getPlayer(playerID: number): Player {
             previousTotalProfit: 0,
             ridesCreated: []
         }
-        network.sendMessage(`This server uses ffa-individual-economy. You currently have a balance of ${initialDollars} to build with.`, [playerID]);
-        network.sendMessage(`To see your balance at any time, say \`!cash\` in chat.`, [playerID]);
+        network.sendMessage(`{NEWLINE}{YELLOW}This server uses ffa-individual-economy. You currently have a balance of {WHITE}${initialDollars}{YELLOW} to build with.{NEWLINE}To see your balance at any time, say \`{WHITE}!cash{YELLOW}\` in chat.`, [playerID]);
     }
     else if (player) {
         playerProfiles[player.publicKeyHash].name = player.name;
