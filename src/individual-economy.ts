@@ -200,7 +200,7 @@ function individualEconMain() {
                 }
                 let sendmsg = '';
                 if (mostProfitableTotal.profit > 0) {
-                    sendmsg += `{NEWLINE}{YELLOW}This month's quality ride expert is {WHITE}${mostProfitableAverage.name}{YELLOW}! They're average profit per ride was ${mostProfitableAverage.profit}.`;
+                    sendmsg += `{NEWLINE}{YELLOW}This month's tycoon is {WHITE}${mostProfitableTotal.name}{YELLOW}! They're average profit per ride was ${mostProfitableAverage.profit}.`;
                 }
                 if (mostProfitableAverage.profit > 0) {
                     sendmsg += `{NEWLINE}{YELLOW}This month's quality ride expert is {WHITE}${mostProfitableAverage.name}{YELLOW}! They're average profit per ride was ${mostProfitableAverage.profit}.`;
