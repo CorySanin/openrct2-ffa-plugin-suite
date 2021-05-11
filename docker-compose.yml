@@ -10,4 +10,4 @@ services:
          - ./openrct2:/home/openrct2/.config/OpenRCT2
       command:
          - "host"
-         - "https://taunt.bot/rct/scenarios/?mode=money"
+         - "https://ffa-tycoon.com/parks/economy"
