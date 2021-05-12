@@ -333,7 +333,6 @@ function getPlayerProfit(playerHash: string): number {
     var profit = 0;
     for (const rideID of playerProfiles[playerHash].ridesCreated) {
         var ride = getRide(rideID);
-        // @ts-ignore
         profit += Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
         // Don't subtract funds if it's a bathroom 🚽
     }
