@@ -1,7 +1,7 @@
 /// <reference path="../types/openrct2.d.ts" />
 // uses OPENRCT2_PLUGIN_API_VERSION = 17
 
-(function() {
+(function () {
 
     const GROUP_NAME = 'IP-BAN';
     const TICKS_PER_MINUTE = 2400;
@@ -28,9 +28,9 @@
             });
 
             context.subscribe('network.join', (e) => {
-                let newPlayer = network.getPlayer(e.player);
+                let newPlayer = getPlayer(e.player);
                 if (newPlayer.ipAddress in bannedIPs && !isPlayerAdmin(newPlayer)) {
-                    network.kickPlayer(newPlayer.id);
+                    network.kickPlayer(getPlayerIndex(newPlayer.id));
                     sendToAdmins(`Kicked ${newPlayer.name} (${newPlayer.ipAddress}). Time remaining: ${Math.ceil((bannedIPs[newPlayer.ipAddress] - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
                 }
                 else {
@@ -43,7 +43,7 @@
                 let outmsg: string, args: any, command = getCommand(msg);
                 if (command !== false) {
                     if ((args = doesCommandMatch(command, [CMDUNBAN])) !== false) {
-                        if(isPlayerAdmin(network.getPlayer(e.player))){
+                        if (isPlayerAdmin(getPlayer(e.player))) {
                             bannedIPs = {};
                             outmsg = '{YELLOW}All bans have been undone!';
                         }
@@ -59,12 +59,35 @@
         }
     }
 
+    function getPlayer(playerID: number): Player {
+        let match: Player = null;
+        network.players.every(p => {
+            if(p.id === playerID){
+                match = p;
+            }
+            return match == null;
+        });
+        return match;
+    }
+
+    function getPlayerIndex(player: Player|number): number {
+        let playerID: number = (typeof player === 'number') ? player : player.id;
+        let match: number = -1;
+        network.players.every((p, index) => {
+            if (p.id === playerID) {
+                match = index;
+            }
+            return match === -1;
+        });
+        return match;
+    }
+
     function sendToAdmins(message) {
         network.players.forEach(player => {
             if (isPlayerAdmin(player)) {
                 network.sendMessage(message, [player.id]);
             }
-        })
+        });
     }
 
     function getBanGroup() {
@@ -98,11 +121,11 @@
                 delete bannedIPs[player.ipAddress];
             }
         }, DEFAULT_TIMEOUT * MS_PER_MINUTE);
-        network.kickPlayer(player.id);
+        network.kickPlayer(getPlayerIndex(player));
     }
 
     function isPlayerAdmin(player: Player) {
-        var perms: string[] = network.getGroup(player.group).permissions;
+        let perms: string[] = network.getGroup(player.group).permissions;
         return perms.indexOf('kick_player') >= 0;
     }
 
@@ -112,7 +135,7 @@
         }
         return false;
     }
-    
+
     function doesCommandMatch(str, commands): boolean | string {
         for (const command of commands) {
             if (typeof command === 'string') {
@@ -132,7 +155,7 @@
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.0.1',
+        version: '0.0.2',
         minApiVersion: 17,
         authors: ['Cory Sanin'],
         type: 'remote',
