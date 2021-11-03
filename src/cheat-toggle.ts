@@ -42,7 +42,7 @@
 
     registerPlugin({
         name: 'ffa-cheat-toggle',
-        version: '0.0.2',
+        version: '0.0.3',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',

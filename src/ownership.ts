@@ -2,7 +2,22 @@
 // uses OPENRCT2_PLUGIN_API_VERSION = 1
 
 (function () {
+    const TILEWIDTH = 32;
     var rideOwners: object;
+
+    function fixAction(e: GameActionEventArgs) {
+        if (e.action === 'trackremove') {
+            var tile = map.getTile(e.args['x'] / TILEWIDTH, e.args['y'] / TILEWIDTH);
+
+            for (var i = 0; i < tile.numElements; i++) {
+                var element = tile.getElement(i);
+                if (element.type === 'track' && element.baseZ === e.args['z']) {
+                    e.args['ride'] = element.ride;
+                    break;
+                }
+            }
+        }
+    }
 
     function ownershipMain() {
         rideOwners = {};
@@ -11,6 +26,7 @@
 
             context.subscribe('action.query', (e) => {
                 if (e.action !== 'ridecreate') {
+                    fixAction(e);
                     if ('ride' in e.args && e.player >= 0) {
                         let player = getPlayer(e.player);
                         if (player == null) {
@@ -74,7 +90,7 @@
     function getPlayer(playerID: number): Player {
         let match: Player = null;
         network.players.every(p => {
-            if(p.id === playerID){
+            if (p.id === playerID) {
                 match = p;
             }
             return match == null;
@@ -98,7 +114,7 @@
 
     registerPlugin({
         name: 'ffa-ownership',
-        version: '0.0.2',
+        version: '0.0.3',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',

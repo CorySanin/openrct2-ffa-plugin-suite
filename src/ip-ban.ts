@@ -155,7 +155,7 @@
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.0.2',
+        version: '0.0.3',
         minApiVersion: 17,
         authors: ['Cory Sanin'],
         type: 'remote',
