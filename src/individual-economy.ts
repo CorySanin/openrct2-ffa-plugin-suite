@@ -114,7 +114,7 @@
                     if (buildActions.indexOf(e.action) >= 0) {
                         setCheatAction(17, playerCash);
                     }
-                    if (playerCash < e.result.cost) {
+                    if (playerCash < e.result.cost && e.result.cost > 0) {
                         network.sendMessage(`{RED}ERROR: Not enough cash to perform that action! It costs ${e.result.cost} and you have ${playerCash}`, [e.player]);
                         e.result = {
                             error: 1,
@@ -224,7 +224,9 @@
                         outmsg = `{TOPAZ}Your current balance is {WHITE}${getPlayerCash(e.player)}`;
                     }
                     else if ((args = doesCommandMatch(command, [CMDTRANSFER])) !== false) {
-                        args = args.split(' ');
+                        let a = args as string;
+                        let lastspace = a.lastIndexOf(' ');
+                        args = [a.substring(0, lastspace), a.substring(lastspace + 1)];
                         if (args.length === 2) {
                             let recipient: number = null;
                             network.players.every(p => {
@@ -387,7 +389,7 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.3',
+        version: '0.0.4',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',
