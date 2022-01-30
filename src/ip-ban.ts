@@ -11,10 +11,10 @@
     const PREFIX = new RegExp('^(!|/)');
     const CMDUNBAN = new RegExp('^unban($| )', 'i');
 
-    var banGroup = -1;
-    var bannedIPs: object;
+    let timeout: number, bannedIPs: object, banGroup = -1;
 
     function main() {
+        timeout = context.sharedStorage.get('ip-ban.timeout', DEFAULT_TIMEOUT);
         if (network.mode === 'server') {
             context.subscribe('action.execute', (e) => {
                 if (e.type === 63) {
@@ -31,7 +31,12 @@
                 let newPlayer = getPlayer(e.player);
                 if (newPlayer.ipAddress in bannedIPs && !isPlayerAdmin(newPlayer)) {
                     network.kickPlayer(getPlayerIndex(newPlayer.id));
-                    sendToAdmins(`Kicked ${newPlayer.name} (${newPlayer.ipAddress}). Time remaining: ${Math.ceil((bannedIPs[newPlayer.ipAddress] - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
+                    if(timeout > 0){
+                        sendToAdmins(`Kicked ${newPlayer.name} (${newPlayer.ipAddress}). Time remaining: ${Math.ceil((bannedIPs[newPlayer.ipAddress] - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
+                    }
+                    else{
+                        sendToAdmins(`Kicked ${newPlayer.name} (${newPlayer.ipAddress}).`);
+                    }
                 }
                 else {
                     sendToAdmins(`${newPlayer.name}'s IP: ${newPlayer.ipAddress}`);
@@ -62,7 +67,7 @@
     function getPlayer(playerID: number): Player {
         let match: Player = null;
         network.players.every(p => {
-            if(p.id === playerID){
+            if (p.id === playerID) {
                 match = p;
             }
             return match == null;
@@ -70,7 +75,7 @@
         return match;
     }
 
-    function getPlayerIndex(player: Player|number): number {
+    function getPlayerIndex(player: Player | number): number {
         let playerID: number = (typeof player === 'number') ? player : player.id;
         let match: number = -1;
         network.players.every((p, index) => {
@@ -115,12 +120,15 @@
     }
 
     function banPlayer(player: Player) {
-        bannedIPs[player.ipAddress] = date.ticksElapsed + (DEFAULT_TIMEOUT * TICKS_PER_MINUTE);
-        context.setTimeout(() => {
-            if (player.ipAddress in bannedIPs) {
-                delete bannedIPs[player.ipAddress];
-            }
-        }, DEFAULT_TIMEOUT * MS_PER_MINUTE);
+        let ip = player.ipAddress;
+        bannedIPs[ip] = date.ticksElapsed + (timeout * TICKS_PER_MINUTE);
+        if (timeout > 0) {
+            context.setTimeout(() => {
+                if (ip in bannedIPs) {
+                    delete bannedIPs[ip];
+                }
+            }, timeout * MS_PER_MINUTE);
+        }
         network.kickPlayer(getPlayerIndex(player));
     }
 
@@ -155,7 +163,7 @@
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.0.3',
+        version: '0.0.4',
         minApiVersion: 17,
         authors: ['Cory Sanin'],
         type: 'remote',
