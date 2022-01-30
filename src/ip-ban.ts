@@ -11,7 +11,7 @@
     const PREFIX = new RegExp('^(!|/)');
     const CMDUNBAN = new RegExp('^unban($| )', 'i');
 
-    let timeout: number, bannedIPs: object, banGroup = -1;
+    let timeout: number, bannedIPs: object, bannedHashes: object, banGroup = -1;
 
     function main() {
         timeout = context.sharedStorage.get('ip-ban.timeout', DEFAULT_TIMEOUT);
@@ -29,17 +29,24 @@
 
             context.subscribe('network.join', (e) => {
                 let newPlayer = getPlayer(e.player);
-                if (newPlayer.ipAddress in bannedIPs && !isPlayerAdmin(newPlayer)) {
+                let ip = newPlayer.ipAddress;
+                let hash = newPlayer.publicKeyHash;
+                if (bannedHashes[hash] in bannedIPs && !(ip in bannedIPs)) {
+                    sendToAdmins(`${newPlayer.name} connected from a new location. New IP is banned.`);
+                    banPlayer(newPlayer);
+                }
+                if (ip in bannedIPs && !isPlayerAdmin(newPlayer)) {
+                    bannedHashes[hash] = ip;
                     network.kickPlayer(getPlayerIndex(newPlayer.id));
-                    if(timeout > 0){
-                        sendToAdmins(`Kicked ${newPlayer.name} (${newPlayer.ipAddress}). Time remaining: ${Math.ceil((bannedIPs[newPlayer.ipAddress] - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
+                    if (timeout > 0) {
+                        sendToAdmins(`Kicked ${newPlayer.name} (${ip}). Time remaining: ${Math.ceil((bannedIPs[ip] - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
                     }
-                    else{
-                        sendToAdmins(`Kicked ${newPlayer.name} (${newPlayer.ipAddress}).`);
+                    else {
+                        sendToAdmins(`Kicked ${newPlayer.name} (${ip}).`);
                     }
                 }
                 else {
-                    sendToAdmins(`${newPlayer.name}'s IP: ${newPlayer.ipAddress}`);
+                    sendToAdmins(`${newPlayer.name}'s IP: ${ip}`);
                 }
             });
 
@@ -50,6 +57,7 @@
                     if ((args = doesCommandMatch(command, [CMDUNBAN])) !== false) {
                         if (isPlayerAdmin(getPlayer(e.player))) {
                             bannedIPs = {};
+                            bannedHashes = {};
                             outmsg = '{YELLOW}All bans have been undone!';
                         }
                     }
@@ -60,6 +68,8 @@
             });
 
             bannedIPs = {};
+            bannedHashes = {};
+            context.setInterval(cleanHashes, DEFAULT_TIMEOUT * MS_PER_MINUTE);
             getBanGroup();
         }
     }
@@ -121,15 +131,29 @@
 
     function banPlayer(player: Player) {
         let ip = player.ipAddress;
+        let hash = player.publicKeyHash;
         bannedIPs[ip] = date.ticksElapsed + (timeout * TICKS_PER_MINUTE);
+        bannedHashes[hash] = ip;
         if (timeout > 0) {
             context.setTimeout(() => {
                 if (ip in bannedIPs) {
                     delete bannedIPs[ip];
                 }
+                cleanHashes(false);
             }, timeout * MS_PER_MINUTE);
         }
         network.kickPlayer(getPlayerIndex(player));
+    }
+
+    function cleanHashes(reduceBlocking = true) {
+        for (let h in bannedHashes) {
+            if (!(bannedHashes[h] in bannedIPs)) {
+                delete bannedHashes[h];
+            }
+            if (reduceBlocking) {
+                break;
+            }
+        }
     }
 
     function isPlayerAdmin(player: Player) {
