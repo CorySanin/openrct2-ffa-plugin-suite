@@ -102,7 +102,8 @@ const SLABHEIGHT = 8;
             for (var k = 0; k < elements.length; k++) {
                 if (elements[k].type === 'entrance' && 'isQueue' in elements[k] && !elements[k]['isQueue']) {
                     let entrance = elements[k] as EntranceElement;
-                    if (pathCoords.x === checkExitCoords.x + (entrance.direction + 1) % 2 * (entrance.direction - 1) * -1
+                    if (entrance.object !== 2 // exclude park entrances
+                        && pathCoords.x === checkExitCoords.x + (entrance.direction + 1) % 2 * (entrance.direction - 1) * -1
                         && pathCoords.y === checkExitCoords.y + entrance.direction % 2 * (entrance.direction - 2)) {
                         for (var j = 0; j < 2; j++) {
                             let ride;
@@ -159,7 +160,7 @@ const SLABHEIGHT = 8;
 
     registerPlugin({
         name: 'ffa-anti-grief',
-        version: '0.0.3',
+        version: '0.0.4',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
