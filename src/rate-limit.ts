@@ -4,17 +4,53 @@
 (function () {
     const NEGATIVE_ACTIONS: (string | number)[] = [6, 19, 15, 42, 44, 51];
     const TICK_COOLDOWN = 15;
+    const CHAT_COOLDOWN = 35;
     const MAX_STRIKES = 5;
     const STRIKE_COOLDOWN = 300;
 
     var negativeActionTicks: object;
     var numberOfOffenses: object;
+    var chatTicks: object;
+    var numberOfChatOffenses: object;
 
     function rateLimitMain() {
         negativeActionTicks = {};
         numberOfOffenses = {};
+        chatTicks = {};
+        numberOfChatOffenses = {};
+
 
         if (network.mode === 'server') {
+            context.subscribe('network.chat', (e) => {
+                var player = getPlayer(e.player);
+                if (!isPlayerAdmin(player)) {
+                    var lastTick = 0;
+                    var currentTick = date.ticksElapsed;
+                    if (player.publicKeyHash in chatTicks) {
+                        lastTick = chatTicks[player.publicKeyHash];
+                    }
+                    chatTicks[player.publicKeyHash] = currentTick;
+
+                    if (currentTick - lastTick < CHAT_COOLDOWN) {
+                        //Too fast!
+                        var strikes = 0;
+                        if (player.publicKeyHash in numberOfChatOffenses) {
+                            strikes = numberOfChatOffenses[player.publicKeyHash];
+                        }
+                        strikes += 1;
+                        if (strikes * 2 >= MAX_STRIKES) {
+                            console.log(`kicking ${player.name}`);
+                            network.kickPlayer(getPlayerIndex(player));
+                            strikes += MAX_STRIKES;
+                        }
+                        else if (strikes > 1) {
+                            network.sendMessage('{RED}ATTENTION: {WHITE}You are chatting too fast! Please slow down.', [e.player]);
+                        }
+                        numberOfChatOffenses[player.publicKeyHash] = strikes;
+                    }
+                }
+            });
+
             context.subscribe('action.query', (e) => {
                 if (NEGATIVE_ACTIONS.indexOf(e.type) !== -1 && e.player >= 0) {
                     var player = getPlayer(e.player);
@@ -60,8 +96,9 @@
             });
 
             context.subscribe('interval.tick', () => {
-                var currentTick = date.ticksElapsed;
-                if (currentTick % STRIKE_COOLDOWN === 0) {
+                const currentTick = date.ticksElapsed;
+                const mod = currentTick % STRIKE_COOLDOWN;
+                if (mod === 0) {
                     for (const playerhash in numberOfOffenses) {
                         var lastTick = 0;
                         if (playerhash in negativeActionTicks) {
@@ -72,10 +109,28 @@
                         }
                     }
                 }
-                else if (currentTick % STRIKE_COOLDOWN === Math.floor(STRIKE_COOLDOWN / 2)) {
+                else if (mod === Math.floor(STRIKE_COOLDOWN / 2)) {
                     for (const playerhash in negativeActionTicks) {
                         if (currentTick - negativeActionTicks[playerhash] > STRIKE_COOLDOWN) {
                             delete negativeActionTicks[playerhash];
+                        }
+                    }
+                }
+                else if (mod === Math.floor(STRIKE_COOLDOWN / 4)) {
+                    for (const playerhash in numberOfChatOffenses) {
+                        var lastTick = 0;
+                        if (playerhash in chatTicks) {
+                            lastTick = chatTicks[playerhash];
+                        }
+                        if (currentTick - lastTick > STRIKE_COOLDOWN && --numberOfChatOffenses[playerhash] <= 0) {
+                            delete numberOfChatOffenses[playerhash];
+                        }
+                    }
+                }
+                else if (mod === Math.floor(STRIKE_COOLDOWN * 3 / 4)) {
+                    for (const playerhash in chatTicks) {
+                        if (currentTick - chatTicks[playerhash] > STRIKE_COOLDOWN) {
+                            delete chatTicks[playerhash];
                         }
                     }
                 }
@@ -103,7 +158,7 @@
         return match;
     }
 
-    function getPlayerIndex(player: Player|number): number {
+    function getPlayerIndex(player: Player | number): number {
         let playerID: number = (typeof player === 'number') ? player : player.id;
         let match: number = -1;
         network.players.every((p, index) => {

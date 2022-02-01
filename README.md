@@ -15,6 +15,10 @@ General anti-griefing measures. Currently only prevents opening a ride with no p
 
 Kicks players for performing too many griefy actions too quickly.
 
+## ffa-ip-ban
+
+Set a player's group to IP-BAN and they will be kicked and blocked from reconecting until the ban expires. Watch as they try to reconnect but to no avail! The default ban time is 60 minutes but can be adjusted in `plugin.store.json` via `ip-ban.timeout`.
+
 ## ffa-cheat-toggle
 
 Toggles 4 cheats on launch (disable vandilism, plants don't age, disable all breakdowns, and ride value doesn't decrease), and keeps grass clear.
