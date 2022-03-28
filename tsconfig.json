@@ -7,5 +7,5 @@
         "removeComments": true,
         "outDir": "lib"
     },
-    "files": ["src/ownership.ts", "src/anti-grief.ts", "src/cheat-toggle.ts", "src/rate-limit.ts", "src/individual-economy.ts", "src/ip-ban.ts", "src/disable-track-designs.ts"]
+    "files": ["src/ownership.ts", "src/anti-grief.ts", "src/cheat-toggle.ts", "src/rate-limit.ts", "src/individual-economy.ts", "src/ip-ban.ts", "src/disable-track-designs.ts", "src/quit-on-title.ts"]
 }
