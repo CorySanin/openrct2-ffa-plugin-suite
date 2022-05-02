@@ -333,11 +333,15 @@
     function getPlayerProfit(playerHash: string): number {
         var profit = 0;
         for (const rideID of playerProfiles[playerHash].ridesCreated) {
-            var ride = getRide(rideID);
-            profit += Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
-            // Don't subtract funds if it's a bathroom 🚽
+            profit += getRideProfit(rideID);
         }
         return profit;
+    }
+
+    function getRideProfit(rideID: number): number {
+        var ride = getRide(rideID);
+        // Don't subtract funds if it's a bathroom 🚽
+        return Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
     }
 
     function getProfitDifference(playerHash: string): number {
@@ -367,6 +371,8 @@
 
     function removeRide(rideID: number): string {
         var playerHash = rideProperties[rideID].authorHash;
+        // keep the profit
+        spendMoney(playerHash, -getRideProfit(rideID));
         var index = playerProfiles[playerHash].ridesCreated.indexOf(rideID);
         if (index !== -1) {
             playerProfiles[playerHash].ridesCreated.splice(index, 1);
