@@ -34,13 +34,14 @@
                 let hash = newPlayer.publicKeyHash;
                 if (bannedHashes[hash] in bannedIPs && !(ip in bannedIPs)) {
                     sendToAdmins(`${newPlayer.name} connected from a new location. New IP is banned.`);
-                    banPlayer(newPlayer);
+                    banPlayer(newPlayer, bannedIPs[bannedHashes[hash]]);
                 }
                 if (ip in bannedIPs && !isPlayerAdmin(newPlayer)) {
+                    let timeout = bannedIPs[ip] || -1;
                     bannedHashes[hash] = ip;
                     network.kickPlayer(getPlayerIndex(newPlayer.id));
                     if (timeout > 0) {
-                        sendToAdmins(`Kicked ${newPlayer.name} (${ip}). Time remaining: ${Math.ceil((bannedIPs[ip] - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
+                        sendToAdmins(`Kicked ${newPlayer.name} (${ip}). Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
                     }
                     else {
                         sendToAdmins(`Kicked ${newPlayer.name} (${ip}).`);
@@ -93,6 +94,10 @@
             bannedHashes = {};
             context.setInterval(cleanHashes, DEFAULT_TIMEOUT * MS_PER_MINUTE);
             getBanGroup();
+
+            context.sharedStorage.get('ip-ban.banned', []).forEach(ip => {
+                banIP(ip, -1);
+            });
         }
     }
 
@@ -167,8 +172,9 @@
         if (!time) {
             time = timeout;
         }
-        bannedIPs[ip] = date.ticksElapsed + (time * TICKS_PER_MINUTE);
+        bannedIPs[ip] = -1;
         if (time > 0) {
+            bannedIPs[ip] = date.ticksElapsed + (time * TICKS_PER_MINUTE);
             context.setTimeout(() => {
                 if (ip in bannedIPs) {
                     delete bannedIPs[ip];
@@ -220,7 +226,7 @@
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.0.5',
+        version: '0.1.0',
         minApiVersion: 17,
         authors: ['Cory Sanin'],
         type: 'remote',
