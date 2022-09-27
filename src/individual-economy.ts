@@ -122,6 +122,10 @@
                             errorMessage: 'Can\'t afford to perform action'
                         }
                     }
+                    if (e.action === 'ridedemolish' &&
+                        'ride' in e.args) {
+                        rideProperties[e.args['ride']].previousTotalProfit = getRide(e.args['ride']).totalProfit;
+                    }
                 }
             });
 
@@ -372,7 +376,7 @@
     function removeRide(rideID: number): string {
         var playerHash = rideProperties[rideID].authorHash;
         // keep the profit
-        spendMoney(playerHash, -getRideProfit(rideID));
+        spendMoney(playerHash, -rideProperties[rideID].previousTotalProfit);
         var index = playerProfiles[playerHash].ridesCreated.indexOf(rideID);
         if (index !== -1) {
             playerProfiles[playerHash].ridesCreated.splice(index, 1);
