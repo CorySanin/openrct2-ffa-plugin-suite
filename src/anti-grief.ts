@@ -164,6 +164,7 @@ const SLABHEIGHT = 8;
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
+        targetApiVersion: 65,
         main: antiGriefMain
     });
 })();

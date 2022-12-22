@@ -18,6 +18,7 @@
         type: 'intransient',
         licence: 'GPL-3.0',
         minApiVersion: 50,
+        targetApiVersion: 65,
         main
     });
 })();

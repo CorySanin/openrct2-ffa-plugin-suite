@@ -1,7 +1,9 @@
 /// <reference path="../types/openrct2.d.ts" />
-// uses OPENRCT2_PLUGIN_API_VERSION = 1
 
 (function () {
+    // action was renamed in API version 66 by #18826
+    const SETCHEAT = (context.apiVersion > 65)? 'setcheat' : 'setcheataction';
+
     function enableCheats() {
         if (network.mode === 'server') {
             //disable vandalism (by the guests, anyway 🙄)
@@ -29,7 +31,7 @@
     }
 
     function setCheatAction(type: number, param1: number = 1, param2: number = 0): void {
-        context.executeAction('setcheataction', {
+        context.executeAction(SETCHEAT, {
             type,
             param1,
             param2
@@ -42,10 +44,11 @@
 
     registerPlugin({
         name: 'ffa-cheat-toggle',
-        version: '0.0.3',
+        version: '0.0.5',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
+        targetApiVersion: 65,
         main: enableCheats
     });
 })();

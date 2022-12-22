@@ -36,7 +36,7 @@
                                 errorMessage: `Could not find user with ID ${e.player}`
                             };
                         }
-                        else if (rideOwners[e.args['ride']] !== player.publicKeyHash && !isPlayerAdmin(player)) {
+                        else if (rideOwners[<number>e.args['ride']] !== player.publicKeyHash && !isPlayerAdmin(player)) {
                             e.result = {
                                 error: 1,
                                 errorTitle: 'NOT OWNED',
@@ -64,7 +64,7 @@
                     }
 
                     if (e.player >= 0 && e.player < network.numPlayers) {
-                        var ride = getRide(e.result['ride']);
+                        var ride = getRide(<number>e.result['ride']);
                         var player = getPlayer(e.player);
                         rideOwners[ride.id] = player.publicKeyHash;
 
@@ -72,7 +72,7 @@
                     }
                 }
                 else if (e.action === 'ridedemolish' && 'ride' in e.args && (!('modifyType' in e.args) || e.args['modifyType'] === 0)) {
-                    delete rideOwners[e.args['ride']];
+                    delete rideOwners[<number>e.args['ride']];
                 }
             });
         }
@@ -118,6 +118,7 @@
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
+        targetApiVersion: 65,
         main: ownershipMain
     });
 })();

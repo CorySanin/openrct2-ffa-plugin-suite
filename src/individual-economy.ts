@@ -23,6 +23,7 @@
     }
 
     const MINIMUM_STARTING_DOLLARS = 10000;
+    const SETCHEAT = (context.apiVersion > 65)? 'setcheat' : 'setcheataction';
     const buildActions = [
         'bannerplace',
         'bannerremove',
@@ -112,7 +113,7 @@
                 if ('cost' in e.result && e.result.cost >= 0 && e.player !== -1) {
                     var playerCash = getPlayerCash(e.player);
                     if (buildActions.indexOf(e.action) >= 0) {
-                        setCheatAction(17, playerCash);
+                        setParkCash(playerCash);
                     }
                     if (playerCash < e.result.cost && e.result.cost > 0) {
                         network.sendMessage(`{RED}ERROR: Not enough cash to perform that action! It costs ${e.result.cost} and you have ${playerCash}`, [e.player]);
@@ -124,7 +125,8 @@
                     }
                     if (e.action === 'ridedemolish' &&
                         'ride' in e.args) {
-                        rideProperties[e.args['ride']].previousTotalProfit = getRide(e.args['ride']).totalProfit;
+                        var r = <number>e.args['ride'];
+                        rideProperties[r].previousTotalProfit = getRide(r).totalProfit;
                     }
                 }
             });
@@ -136,18 +138,18 @@
                     // add/remove rides from player arrays
                     if (e.action === 'ridecreate' &&
                         'ride' in e.result) {
-                        addRide(e.player, e.result['ride']);
+                        addRide(e.player, <number>e.result['ride']);
                     }
                     else if (e.action === 'ridedemolish' &&
                         'ride' in e.args) {
-                        player = removeRide(e.args['ride']);
+                        player = removeRide(<number>e.args['ride']);
                     }
 
                     // deduct the money
                     if ('cost' in e.result) {
                         spendMoney(player, e.result.cost);
                         if (buildActions.indexOf(e.action) >= 0) {
-                            setCheatAction(17, getPlayerCash(e.player));
+                            setParkCash(getPlayerCash(e.player));
                         }
                     }
                 }
@@ -155,7 +157,7 @@
 
             context.subscribe('interval.day', (e) => {
                 if (park.cash <= 0) {
-                    setCheatAction(17, initialDollars);
+                    setParkCash(initialDollars);
                 }
                 if (date.day === 1) {
                     var mostProfitableTotal = {
@@ -385,8 +387,12 @@
         return playerHash;
     }
 
+    function setParkCash(money: number) {
+        setCheatAction(17, Math.max(money, 20000));
+    }
+
     function setCheatAction(type: number, param1: number = 1, param2: number = 0): void {
-        context.executeAction('setcheataction', {
+        context.executeAction(SETCHEAT, {
             type,
             param1,
             param2
@@ -399,11 +405,12 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.4',
+        version: '0.0.5',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
+        targetApiVersion: 65,
         main: individualEconMain
     });
 })();
