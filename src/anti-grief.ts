@@ -5,8 +5,10 @@ const TILEWIDTH = 32;
 const SLABHEIGHT = 8;
 
 (function () {
+    var entrancePath: null | CoordsXYZ;
     function antiGriefMain() {
         if (network.mode === 'server') {
+            entrancePath = getEntranceCoords();
             context.subscribe('action.query', (e) => {
                 /**
                  * Do not open rides without paths leading from an exit
@@ -37,17 +39,7 @@ const SLABHEIGHT = 8;
                 }
             });
 
-            // context.subscribe('action.execute', (e) => {
-            //     if(e.action === 'peeppickup')
-            //         console.log(e);
-            // });
-
-            context.subscribe('interval.tick', (e) => {
-                //needs work
-                // if (date.ticksElapsed % 50 === 0) {
-                //     relocateLostGuests();
-                // }
-            });
+            context.subscribe('interval.day', findLostGuests);
         }
     }
 
@@ -119,24 +111,81 @@ const SLABHEIGHT = 8;
         return false;
     }
 
-    function relocateLostGuests() {
-        var peeps = map.getAllEntities('peep');
-        peeps.forEach(peep => {
-            var elements = map.getTile(Math.floor(peep.x / TILEWIDTH), Math.floor(peep.y / TILEWIDTH)).elements;
-            var pathIndex = -1;
-            for (var i = 0; i < elements.length; i++) {
-                if ((elements[i].type === 'footpath' || elements[i].type === 'entrance' || elements[i].type === 'track') && elements[i].baseHeight <= peep.z / SLABHEIGHT) {
-                    pathIndex = i;
+    function getEntranceCoords(): CoordsXYZ {
+        for (var i = 0; i < map.size.x; i++) {
+            for (var j = 0; j < map.size.y; j++) {
+                var tile = map.getTile(i, j);
+                for (var z = 0; z < tile.elements.length; z++) {
+                    if (tile.elements[z].type == 'entrance' && (<EntranceElement>tile.elements[z]).object === 2) {
+                        var entrace = tile.elements[z] as EntranceElement;
+                        var direction = (entrace.direction + 2) % 4
+                        var checkCoords = {
+                            x: i + (direction + 1) % 2 * (direction - 1) * -1,
+                            y: j + direction % 2 * (direction - 2)
+                        };
+                        var elements = map.getTile(checkCoords.x, checkCoords.y).elements;
+                        for (var k = 0; k < elements.length; k++) {
+                            if (elements[k].type === 'footpath' && (elements[k].baseHeight === entrace.baseZ / SLABHEIGHT || elements[k].baseHeight + 2 === entrace.baseZ / SLABHEIGHT)) {
+                                return {
+                                    x: checkCoords.x * TILEWIDTH,
+                                    y: checkCoords.y * TILEWIDTH,
+                                    z: elements[k].baseHeight * SLABHEIGHT
+                                };
+                            }
+                        }
+                    }
                 }
             }
-            if (elements.length !== 0 && pathIndex === -1) {
-                console.log(`peep ${peep.name} is lost.`);
-                console.log(elements);
-                // context.executeAction('peeppickup', {
-                // //NO ARGS??????
-                // }, doNothing);
-            }
-        })
+        }
+        console.log('Couldn\'t find entrance adjascent path to place lost guests!');
+        return null;
+    }
+
+    function findLostGuests() {
+        if (entrancePath != null && context.apiVersion >= 66) {
+            var peeps = map.getAllEntities((date.day % 2) ? 'guest' : 'staff');
+            var lostPeeps = [];
+            peeps.forEach(peep => {
+                var elements = map.getTile(Math.floor(peep.x / TILEWIDTH), Math.floor(peep.y / TILEWIDTH)).elements;
+                var pathIndex = -1;
+                var surface: null | SurfaceElement = null;
+                for (var i = 0; i < elements.length; i++) {
+                    if ((elements[i].type === 'footpath' || elements[i].type === 'entrance' || elements[i].type === 'track') && elements[i].baseHeight <= peep.z / SLABHEIGHT) {
+                        pathIndex = i;
+                    }
+                    else if (elements[i].type === 'surface') {
+                        surface = elements[i] as SurfaceElement;
+                    }
+                }
+                if (elements.length !== 0 && pathIndex === -1 && (surface.hasOwnership || surface.hasConstructionRights)) {
+                    lostPeeps.push(peep);
+                }
+            });
+            relocateLostGuests(lostPeeps);
+        }
+    }
+
+    function relocateLostGuests(peeps: Entity[]) {
+        if (peeps && peeps.length) {
+            var peep = peeps.pop();
+            context.executeAction("peeppickup", {
+                type: 0,
+                id: peep.id,
+                x: -32768,
+                y: 0,
+                z: 0,
+                playerId: 0
+            }, () => {
+                context.executeAction("peeppickup", {
+                    type: 2,
+                    id: peep.id,
+                    x: entrancePath.x,
+                    y: entrancePath.y,
+                    z: entrancePath.z,
+                    playerId: 0
+                }, () => relocateLostGuests(peeps));
+            });
+        }
     }
 
     function isPlayerAdmin(player: Player) {
@@ -160,7 +209,7 @@ const SLABHEIGHT = 8;
 
     registerPlugin({
         name: 'ffa-anti-grief',
-        version: '0.0.4',
+        version: '0.0.5',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
