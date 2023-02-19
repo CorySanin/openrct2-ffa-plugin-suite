@@ -23,7 +23,7 @@
     }
 
     const MINIMUM_STARTING_DOLLARS = 10000;
-    const SETCHEAT = (context.apiVersion > 65)? 'setcheat' : 'setcheataction';
+    const SETCHEAT = (context.apiVersion > 65) ? 'setcheat' : 'setcheataction';
     const buildActions = [
         'bannerplace',
         'bannerremove',
@@ -328,7 +328,9 @@
     }
 
     function spendMoney(player: number | string, cost: number) {
-        playerProfiles[(typeof player === 'number') ? getPlayer(player).publicKeyHash : player].moneySpent += cost;
+        if (!park.getFlag('noMoney')) {
+            playerProfiles[(typeof player === 'number') ? getPlayer(player).publicKeyHash : player].moneySpent += cost;
+        }
     }
 
     function getPlayerCash(playerID: number): number {
@@ -396,11 +398,7 @@
             type,
             param1,
             param2
-        }, doNothing);
-    }
-
-    function doNothing() {
-        //Done!
+        });
     }
 
     registerPlugin({
