@@ -2,7 +2,7 @@
 
 (function () {
     // action was renamed in API version 66 by #18826
-    const SETCHEAT = (context.apiVersion > 65)? 'setcheat' : 'setcheataction';
+    const SETCHEAT = (context.apiVersion > 65) ? 'setcheat' : 'setcheataction';
 
     function enableCheats() {
         if (network.mode === 'server') {
@@ -28,6 +28,17 @@
                 }
             });
         }
+        // @ts-ignore
+        else if (typeof FFAPLUGINMSG === 'undefined') {
+            // @ts-ignore
+            FFAPLUGINMSG = true;
+            console.log(
+                '\n' +
+                '    This server uses one or more plugins from the FFA plugin suite.\n' +
+                '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
+                '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
+                '\n');
+        }
     }
 
     function setCheatAction(type: number, param1: number = 1, param2: number = 0): void {
@@ -35,11 +46,7 @@
             type,
             param1,
             param2
-        }, doNothing);
-    }
-
-    function doNothing() {
-        //Done!
+        });
     }
 
     registerPlugin({

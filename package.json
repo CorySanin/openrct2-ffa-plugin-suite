@@ -2,7 +2,7 @@
   "name": "ffa-suite",
   "version": "0.0.1",
   "scripts": {
-    "build:types": "tsc --noEmit",
+    "build:types": "npm exec tsc --noEmit",
     "build": "npm run build:types",
     "gettypes": "curl https://raw.githubusercontent.com/OpenRCT2/OpenRCT2/develop/distribution/openrct2.d.ts > types/openrct2.d.ts"
   },
@@ -11,6 +11,6 @@
   "author": "Cory Sanin",
   "license": "GPL-3.0",
   "devDependencies": {
-    "typescript": "4.9.5"
+    "typescript": "5.0.2"
   }
 }
