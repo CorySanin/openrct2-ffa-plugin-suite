@@ -276,15 +276,15 @@
                 }
             });
         }
-        // @ts-ignore
-        else if (typeof FFAPLUGINMSG === 'undefined') {
-            // @ts-ignore
-            FFAPLUGINMSG = true;
-            console.log(
-                'This server uses one or more plugins from the FFA plugin suite.\n' +
-                'https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
-                'Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!');
-        }
+        // // @ts-ignore
+        // else if (typeof FFAPLUGINMSG === 'undefined') {
+        //     // @ts-ignore
+        //     FFAPLUGINMSG = true;
+        //     console.log(
+        //         'This server uses one or more plugins from the FFA plugin suite.\n' +
+        //         'https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
+        //         'Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!');
+        // }
     }
 
     function getPlayer(playerID: number): Player {
