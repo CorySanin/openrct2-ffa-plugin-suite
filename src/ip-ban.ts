@@ -1,5 +1,8 @@
 /// <reference path="../types/openrct2.d.ts" />
 // uses OPENRCT2_PLUGIN_API_VERSION = 17
+interface StatArgs {
+    stat: string
+}
 
 (function () {
 
@@ -11,8 +14,14 @@
     const PREFIX = new RegExp('^(!|/)');
     const CMDBAN = new RegExp('^ban ', 'i');
     const CMDUNBAN = new RegExp('^unban($| )', 'i');
+    const GUID = new RegExp(/\S{8}(-\S{4}){3}-\S{12}/);
+    const ACTION_NAME = 'statget';
+    const STORAGE_KEY = 'objectStore.PrivateReadonly.objectId';
+    const SUCCESSRESULT: GameActionResult = { error: 0 };
+    const ERRRESULT: GameActionResult = { error: 1 };
+    const PLAYER_OBJECTS = {};
 
-    let timeout: number, bannedIPs: object, bannedHashes: object, banGroup = -1;
+    let timeout: number, bannedIPs: object, bannedObjects: object, banGroup = -1;
 
     function main() {
         timeout = context.sharedStorage.get('ip-ban.timeout', DEFAULT_TIMEOUT);
@@ -28,17 +37,11 @@
                 }
             });
 
-            context.subscribe('network.join', (e) => {
+            context.subscribe('network.join', e => {
                 let newPlayer = getPlayer(e.player);
                 let ip = newPlayer.ipAddress;
-                let hash = newPlayer.publicKeyHash;
-                if (bannedHashes[hash] in bannedIPs && !(ip in bannedIPs)) {
-                    sendToAdmins(`${newPlayer.name} connected from a new location. New IP is banned.`);
-                    banPlayer(newPlayer, bannedIPs[bannedHashes[hash]]);
-                }
                 if (ip in bannedIPs && !isPlayerAdmin(newPlayer)) {
                     let timeout = bannedIPs[ip] || -1;
-                    bannedHashes[hash] = ip;
                     network.kickPlayer(getPlayerIndex(newPlayer.id));
                     if (timeout > 0) {
                         sendToAdmins(`Kicked ${newPlayer.name} (${ip}). Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
@@ -52,6 +55,11 @@
                 }
             });
 
+            context.subscribe('network.leave', e => {
+                let player = getPlayer(e.player);
+                delete PLAYER_OBJECTS[`${e.player}|${player.name}`];
+            });
+
             context.subscribe('network.chat', (e) => {
                 let msg = e.message;
                 let outmsg: string, args: any, command = getCommand(msg);
@@ -62,10 +70,11 @@
                                 args = args.split(' ')[0];
                                 delete bannedIPs[args];
                                 outmsg = `{YELLOW}Unbanned ${args}!`;
+                                cleanHashes(false);
                             }
                             else {
-                                bannedIPs = {};
-                                bannedHashes = {};
+                                initializeBannedIps();
+                                bannedObjects = {};
                                 outmsg = '{YELLOW}All bans have been undone!';
                             }
                         }
@@ -80,7 +89,12 @@
                             if (!t) {
                                 t = timeout;
                             }
-                            banIP(args[0], t);
+                            if ((args[0] as string).match(GUID)) {
+                                banKey(args[0], t);
+                            }
+                            else {
+                                banIP(args[0], t);
+                            }
                             outmsg = `{YELLOW}Banned ${args[0]} for ${t} minutes!`;
                         }
                     }
@@ -90,26 +104,76 @@
                 }
             });
 
-            bannedIPs = {};
-            bannedHashes = {};
+            initializeBannedIps();
+            bannedObjects = {};
             context.setInterval(cleanHashes, DEFAULT_TIMEOUT * MS_PER_MINUTE);
             getBanGroup();
 
             context.sharedStorage.get('ip-ban.banned', []).forEach(ip => {
                 banIP(ip, -1);
             });
+            context.sharedStorage.get('ip-ban.bannedKeys', []).forEach(key => {
+                banKey(key, -1);
+            });
+
+            context.registerAction<StatArgs>(ACTION_NAME,
+                (arg: GameActionEventArgs<StatArgs>) => {
+                    let player = getPlayer(arg.player);
+                    let stat = arg.args.stat;
+                    if (bannedObjects[stat] in bannedIPs && !(player.ipAddress in bannedIPs)) {
+                        sendToAdmins(`${player.name} connected from a new location. New IP is banned.`);
+                        banPlayer(player, Math.ceil((bannedIPs[bannedObjects[stat]] - date.ticksElapsed) / TICKS_PER_MINUTE));
+                    }
+                    else {
+                        sendToAdmins(`${player.name}'s key: ${stat}`);
+                        PLAYER_OBJECTS[getPlayerGuidKey(player)] = stat;
+                    }
+                    return ERRRESULT
+                },
+                () => ERRRESULT);
         }
-        // // @ts-ignore
-        // else if (typeof FFAPLUGINMSG === 'undefined') {
-        //     // @ts-ignore
-        //     FFAPLUGINMSG = true;
-        //     console.log(
-        //         '\n' +
-        //         '    This server uses one or more plugins from the FFA plugin suite.\n' +
-        //         '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
-        //         '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' + 
-        //         '\n');
-        // }
+        else {
+            function generateUUID() { // https://stackoverflow.com/a/8809472/11210376
+                let s: string;
+                var d = new Date().getTime();//Timestamp
+                var d2 = date.ticksElapsed; //Time in microseconds since page-load or 0 if unsupported
+                s = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    var r = Math.random() * 16;//random number between 0 and 16
+                    if (d > 0) {//Use timestamp until depleted
+                        r = (d + r) % 16 | 0;
+                        d = Math.floor(d / 16);
+                    } else {//Use microseconds since page-load if supported
+                        r = (d2 + r) % 16 | 0;
+                        d2 = Math.floor(d2 / 16);
+                    }
+                    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                });
+                context.sharedStorage.set(STORAGE_KEY, s);
+                return s;
+            }
+
+            // @ts-ignore
+            if (typeof FFAPLUGINMSG === 'undefined') {
+                // @ts-ignore
+                FFAPLUGINMSG = true;
+                console.log(
+                    '\n' +
+                    '    This server uses one or more plugins from the FFA plugin suite.\n' +
+                    '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
+                    '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
+                    '\n');
+            }
+
+            let statid = context.sharedStorage.get(STORAGE_KEY, false) || generateUUID();
+
+            context.registerAction<StatArgs>(ACTION_NAME,
+                () => SUCCESSRESULT,
+                () => SUCCESSRESULT);
+
+            context.executeAction(ACTION_NAME, {
+                stat: statid
+            } as StatArgs);
+        }
     }
 
     function getPlayer(playerID: number): Player {
@@ -133,6 +197,16 @@
             return match === -1;
         });
         return match;
+    }
+
+    function initializeBannedIps() {
+        bannedIPs = {
+            null: -1
+        };
+    }
+
+    function getPlayerGuidKey(player: Player) {
+        return `${player.id}|${player.name}`;
     }
 
     function sendToAdmins(message) {
@@ -173,8 +247,10 @@
             time = timeout;
         }
         let ip = player.ipAddress;
-        let hash = player.publicKeyHash;
-        bannedHashes[hash] = ip;
+        let stat = PLAYER_OBJECTS[getPlayerGuidKey(player)];
+        if (stat && !(stat in bannedObjects)) {
+            bannedObjects[stat] = ip;
+        }
         banIP(ip, time);
         network.kickPlayer(getPlayerIndex(player));
     }
@@ -195,10 +271,27 @@
         }
     }
 
+    function banKey(key: string, time?: number) {
+        if (!time) {
+            time = timeout;
+        }
+        let val = -1;
+        if (time > 0) {
+            val = date.ticksElapsed + (time * TICKS_PER_MINUTE);
+            context.setTimeout(() => {
+                if (val in bannedIPs) {
+                    delete bannedIPs[val];
+                }
+                cleanHashes(false);
+            }, time * MS_PER_MINUTE);
+        }
+        bannedObjects[key] = bannedIPs[val] = val;
+    }
+
     function cleanHashes(reduceBlocking = true) {
-        for (let h in bannedHashes) {
-            if (!(bannedHashes[h] in bannedIPs)) {
-                delete bannedHashes[h];
+        for (let h in bannedObjects) {
+            if (!(bannedObjects[h] in bannedIPs)) {
+                delete bannedObjects[h];
             }
             if (reduceBlocking) {
                 break;
@@ -237,7 +330,7 @@
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.1.0',
+        version: '0.2.0',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
