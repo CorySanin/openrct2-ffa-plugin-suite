@@ -23,7 +23,7 @@
     }
 
     const MINIMUM_STARTING_DOLLARS = 10000;
-    const SETCHEAT = (context.apiVersion > 65) ? 'setcheat' : 'setcheataction';
+    const SETCHEAT = (context.apiVersion > 65) ? ((context.apiVersion >= 74) ? 'cheatset' : 'setcheat') : 'setcheataction';
     const buildActions = [
         'bannerplace',
         'bannerremove',
@@ -412,7 +412,7 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.5',
+        version: '0.0.6',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',

@@ -221,11 +221,13 @@ declare global {
          * @param type The object type.
          * @param index The index.
          */
-        getObject(type: ObjectType, index: number): LoadedObject;
+        getObject(type: ObjectType, index: number): LoadedImageObject;
+        getObject(type: "music", index: number): LoadedObject;
         getObject(type: "ride", index: number): RideObject;
         getObject(type: "small_scenery", index: number): SmallSceneryObject;
 
-        getAllObjects(type: ObjectType): LoadedObject[];
+        getAllObjects(type: ObjectType): LoadedImageObject[];
+        getAllObjects(type: "music"): LoadedObject[];
         getAllObjects(type: "ride"): RideObject[];
 
         /**
@@ -1585,7 +1587,7 @@ declare global {
     }
 
     /**
-     * Represents the definition of a loaded object (.DAT or .json) such a ride type or scenery item.
+     * Represents the definition of a loaded object (.DAT or .json) such as ride type or scenery item.
      */
     interface LoadedObject {
         /**
@@ -1618,9 +1620,25 @@ declare global {
     }
 
     /**
+    * Represents the definition of a loaded object that has one or more associated images.
+    */
+    interface LoadedImageObject extends LoadedObject {
+        /**
+         * Id of the objects base image. This is also known as the preview image.
+         */
+        readonly baseImageId: number;
+
+        /**
+         * The number of images for this object.
+         * Use this in conjunction with the baseImageId to iterate over an objects images.
+         */
+        readonly numImages: number;
+    }
+
+    /**
      * Represents the object definition of a ride or stall.
      */
-    interface RideObject extends LoadedObject {
+    interface RideObject extends LoadedImageObject {
         /**
          * The description of the ride / stall in the player's current language.
          */
@@ -1727,7 +1745,7 @@ declare global {
     /**
      * Represents the object definition of a small scenery item such a tree.
      */
-    interface SmallSceneryObject extends LoadedObject {
+    interface SmallSceneryObject extends LoadedImageObject {
         /**
          * Raw bit flags that describe characteristics of the scenery item.
          */
@@ -2105,7 +2123,7 @@ declare global {
          * The track segment adds to inversion counter. Usually applied to the first half of inversions.
          */
         readonly countsAsInversion: boolean;
-        
+
         /**
          * Gets a length of the subpositions list for this track segment.
          */
@@ -2309,6 +2327,11 @@ declare global {
          * The current tilt of the car in the X/Y axis.
          */
         bankRotation: number;
+		
+		/**
+		 * Whether the car sprite is reversed or not.
+		 */ 
+		isReversed: boolean;
 
         /**
          * The colour of the car.
@@ -3112,7 +3135,21 @@ declare global {
          */
         readonly parkSize: number;
 
+        /**
+         * The name of the park, shown on the park entrance.
+         * Not the name of the scenario.
+         */
         name: string;
+
+        /**
+         * The current research status, and what
+         * has and hasn't yet been researched.
+         */
+        readonly research: Research;
+
+        /**
+         * The park message / notification queue, and historical messages.
+         */
         messages: ParkMessage[];
 
         /**
@@ -3131,6 +3168,130 @@ declare global {
         postMessage(message: string): void;
         postMessage(message: ParkMessageDesc): void;
     }
+
+    interface Research {
+        /**
+         * The list of rides and scenery sets that have already been researched.
+         */
+        inventedItems: ResearchItem[];
+
+        /**
+         * The order of rides and scenery sets to be researched.
+         */
+        uninventedItems: ResearchItem[];
+
+        /**
+         * The last item that was researched, or null if no
+         * item has been researched yet.
+         */
+        readonly lastResearchedItem: ResearchItem | null;
+
+        /**
+         * The item currently being researched, or null if
+         * research is complete.
+         */
+        readonly expectedItem: ResearchItem | null;
+
+        /**
+         * The amount of funding currently spent on research.
+         */
+        funding: ResearchFundingLevel;
+
+        /**
+         * The categories of research which should be prioritised.
+         */
+        priorities: ResearchCategory[];
+
+        /**
+         * The current stage for the ride or scenery set being researched.
+         */
+        stage: ResearchFundingStage;
+
+        /**
+         * The progress for the current stage between 0 and 65535.
+         * This will increment more quickly the higher the research funding.
+         */
+        progress: number;
+
+        /**
+         * The expected month the current item being researched will complete.
+         * Value is between 0 and 7, 0 being March and 7 being October.
+         * Value is null if there is not yet an expected month.
+         */
+        readonly expectedMonth: number | null;
+
+        /**
+         * The expected day of the month the current item being researched will complete.
+         * Value is between 1 and 31.
+         * Value is null if there is not yet an expected month.
+         */
+        readonly expectedDay: number | null;
+
+        /**
+         * Gets whether a particular object has been researched and is available to construct.
+         * @param type The type of object, e.g. ride, scenery group, or small scenery.
+         * @param index The object index.
+         */
+        isObjectResearched(type: ObjectType, index: number): boolean;
+    }
+
+    type ResearchItem = RideResearchItem | SceneryResearchItem;
+
+    interface RideResearchItem {
+        readonly type: "ride";
+
+        /**
+         * The research category this item belongs in.
+         * E.g. gentle rides, thrill rides, shops etc.
+         * Note: Any updates to this field are ignored by OpenRCT2, the category will be derived from the ride type.
+         */
+        readonly category?: ResearchCategory;
+
+        /**
+         * The ride type. Each vehicle can have a seperate invention for each ride type.
+         */
+        readonly rideType: number;
+
+        /**
+         * The ride (vehicle) object index.
+         */
+        readonly object: number;
+    }
+
+    interface SceneryResearchItem {
+        readonly category?: "scenery_group";
+        readonly type: "scenery";
+
+        /**
+         * The scenery set object index.
+         */
+        readonly object: number;
+    }
+
+    type ResearchItemType = "scenery" | "ride";
+
+    type ResearchCategory =
+        "transport" |
+        "gentle" |
+        "rollercoaster" |
+        "thrill" |
+        "water" |
+        "shop" |
+        "scenery";
+
+    enum ResearchFundingLevel {
+        None,
+        Minimum,
+        Normal,
+        Maximum
+    }
+
+    type ResearchFundingStage =
+        "initial_research" |
+        "designing" |
+        "completing_design" |
+        "unknown" |
+        "finished_all";
 
     type ScenarioObjectiveType =
         "none" |
