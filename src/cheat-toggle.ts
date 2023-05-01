@@ -28,17 +28,17 @@
                 }
             });
         }
-        // // @ts-ignore
-        // else if (typeof FFAPLUGINMSG === 'undefined') {
-        //     // @ts-ignore
-        //     FFAPLUGINMSG = true;
-        //     console.log(
-        //         '\n' +
-        //         '    This server uses one or more plugins from the FFA plugin suite.\n' +
-        //         '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
-        //         '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
-        //         '\n');
-        // }
+        // @ts-ignore
+        else if (typeof FFAPLUGINMSG === 'undefined') {
+            // @ts-ignore
+            FFAPLUGINMSG = true;
+            console.log(
+                '\n' +
+                '    This server uses one or more plugins from the FFA plugin suite.\n' +
+                '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
+                '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
+                '\n');
+        }
     }
 
     function setCheatAction(type: number, param1: number = 1, param2: number = 0): void {
