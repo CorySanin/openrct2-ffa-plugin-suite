@@ -11,6 +11,6 @@
   "author": "Cory Sanin",
   "license": "GPL-3.0",
   "devDependencies": {
-    "typescript": "5.0.2"
+    "typescript": "5.0.4"
   }
 }

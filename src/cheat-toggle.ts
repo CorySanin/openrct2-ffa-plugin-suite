@@ -1,8 +1,8 @@
 /// <reference path="../types/openrct2.d.ts" />
 
 (function () {
-    // action was renamed in API version 66 by #18826
-    const SETCHEAT = (context.apiVersion > 65) ? 'setcheat' : 'setcheataction';
+    // action was renamed in API version 66 by #18826 and again in API version 74 by #19987
+    const SETCHEAT = (context.apiVersion > 65) ? ((context.apiVersion >= 74) ? 'cheatset' : 'setcheat') : 'setcheataction';
 
     function enableCheats() {
         if (network.mode === 'server') {
@@ -51,7 +51,7 @@
 
     registerPlugin({
         name: 'ffa-cheat-toggle',
-        version: '0.0.5',
+        version: '0.0.6',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
