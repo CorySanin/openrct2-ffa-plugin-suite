@@ -51,11 +51,12 @@
 
     registerPlugin({
         name: 'ffa-cheat-toggle',
-        version: '0.0.6',
+        version: '0.0.7',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
-        targetApiVersion: 65,
+        targetApiVersion: 77,
+        minApiVersion: 65,
         main: enableCheats
     });
 })();

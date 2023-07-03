@@ -13,7 +13,7 @@
 
     registerPlugin({
         name: 'ffa-quit-on-title',
-        version: '0.0.1',
+        version: '0.0.7',
         authors: ['Cory Sanin'],
         type: 'intransient',
         licence: 'GPL-3.0',

@@ -1,5 +1,4 @@
 /// <reference path="../types/openrct2.d.ts" />
-// uses OPENRCT2_PLUGIN_API_VERSION = 2
 
 (function () {
     interface PlayerProfile {
@@ -291,26 +290,7 @@
         if (playerID === -1) {
             return null;
         }
-        let match: Player = null;
-        network.players.every(p => {
-            if (p.id === playerID) {
-                match = p;
-            }
-            return match == null;
-        });
-        if (match && !(match.publicKeyHash in playerProfiles)) {
-            playerProfiles[match.publicKeyHash] = {
-                moneySpent: 0,
-                name: match.name,
-                previousTotalProfit: 0,
-                ridesCreated: []
-            }
-            network.sendMessage(`{NEWLINE}{YELLOW}This server uses ffa-individual-economy. You currently have a balance of {WHITE}${initialDollars}{YELLOW} to build with.{NEWLINE}To see your balance at any time, say \`{WHITE}!cash{YELLOW}\` in chat.`, [playerID]);
-        }
-        else if (match) {
-            playerProfiles[match.publicKeyHash].name = match.name;
-        }
-        return match;
+        return network.getPlayer(playerID);
     }
 
     function getRide(rideID: number): Ride {
@@ -412,12 +392,12 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.6',
+        version: '0.0.7',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
-        targetApiVersion: 65,
+        targetApiVersion: 77,
         main: individualEconMain
     });
 })();

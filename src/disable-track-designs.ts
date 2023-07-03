@@ -28,12 +28,12 @@
 
     registerPlugin({
         name: 'ffa-disable-track-designs',
-        version: '0.0.3',
+        version: '0.0.7',
         minApiVersion: 1,
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
-        targetApiVersion: 65,
+        targetApiVersion: 77,
         main: disableTrackDesigns
     });
 })();

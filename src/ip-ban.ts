@@ -177,14 +177,10 @@ interface StatArgs {
     }
 
     function getPlayer(playerID: number): Player {
-        let match: Player = null;
-        network.players.every(p => {
-            if (p.id === playerID) {
-                match = p;
-            }
-            return match == null;
-        });
-        return match;
+        if (playerID === -1) {
+            return null;
+        }
+        return network.getPlayer(playerID);
     }
 
     function getPlayerIndex(player: Player | number): number {
@@ -330,12 +326,12 @@ interface StatArgs {
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.2.0',
+        version: '0.2.1',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
         minApiVersion: 17,
-        targetApiVersion: 65,
+        targetApiVersion: 77,
         main
     });
 })();

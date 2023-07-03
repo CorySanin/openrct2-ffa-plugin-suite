@@ -155,14 +155,10 @@
     }
 
     function getPlayer(playerID: number): Player {
-        let match: Player = null;
-        network.players.every(p => {
-            if (p.id === playerID) {
-                match = p;
-            }
-            return match == null;
-        });
-        return match;
+        if (playerID === -1) {
+            return null;
+        }
+        return network.getPlayer(playerID);
     }
 
     function getPlayerIndex(player: Player | number): number {
@@ -179,11 +175,12 @@
 
     registerPlugin({
         name: 'ffa-rate-limit',
-        version: '0.0.3',
+        version: '0.0.7',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
-        targetApiVersion: 65,
+        minApiVersion: 65,
+        targetApiVersion: 77,
         main: rateLimitMain
     });
 })();
