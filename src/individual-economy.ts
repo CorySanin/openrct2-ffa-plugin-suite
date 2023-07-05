@@ -21,6 +21,8 @@
         [rideID: number]: RideProperty
     }
 
+    const PLAYER_PROFILES_KEY = 'playerProfiles';
+    const RIDE_PROPERTIES_KEY = 'rideProperties';
     const MINIMUM_STARTING_DOLLARS = 10000;
     const SETCHEAT = (context.apiVersion > 65) ? ((context.apiVersion >= 74) ? 'cheatset' : 'setcheat') : 'setcheataction';
     const buildActions = [
@@ -99,8 +101,12 @@
 
     function individualEconMain() {
         if (network.mode === 'server') {
-            playerProfiles = {};
-            rideProperties = {};
+            let storage = context.getParkStorage();
+            playerProfiles = storage.get(PLAYER_PROFILES_KEY, {});
+            rideProperties = storage.get(RIDE_PROPERTIES_KEY, {});
+            storage.set(PLAYER_PROFILES_KEY, playerProfiles);
+            storage.set(RIDE_PROPERTIES_KEY, rideProperties);
+
             initialDollars = Math.max(MINIMUM_STARTING_DOLLARS, park.cash);
 
             context.subscribe('network.join', (e) => {
@@ -290,7 +296,20 @@
         if (playerID === -1) {
             return null;
         }
-        return network.getPlayer(playerID);
+        var p: Player = network.getPlayer(playerID);
+        if (p && !(p.publicKeyHash in playerProfiles)) {
+            playerProfiles[p.publicKeyHash] = {
+                moneySpent: 0,
+                name: p.name,
+                previousTotalProfit: 0,
+                ridesCreated: []
+            };
+            network.sendMessage(`{NEWLINE}{YELLOW}This server uses ffa-individual-economy. You currently have a balance of {WHITE}${initialDollars}{YELLOW} to build with.{NEWLINE}To see your balance at any time, say \`{WHITE}!cash{YELLOW}\` in chat.`, [playerID]);
+        }
+        else if (p) {
+            playerProfiles[p.publicKeyHash].name = p.name;
+        }
+        return p;
     }
 
     function getRide(rideID: number): Ride {
@@ -317,13 +336,16 @@
     }
 
     function spendMoney(player: number | string, cost: number) {
-        if (!park.getFlag('noMoney')) {
+        if (!park.getFlag('noMoney') && player !== null) {
             playerProfiles[(typeof player === 'number') ? getPlayer(player).publicKeyHash : player].moneySpent += cost;
         }
     }
 
     function getPlayerCash(playerID: number): number {
         var player = getPlayer(playerID);
+        if (player === null) {
+            return 0;
+        }
         return initialDollars - playerProfiles[player.publicKeyHash].moneySpent + getPlayerProfit(player.publicKeyHash);
     }
 
@@ -392,7 +414,7 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.7',
+        version: '0.0.8',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',

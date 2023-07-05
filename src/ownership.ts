@@ -3,6 +3,7 @@
 
 (function () {
     const TILEWIDTH = 32;
+    const PARK_STORAGE_KEY = 'rideOwners';
     var rideOwners: object;
 
     function fixAction(e: GameActionEventArgs) {
@@ -20,10 +21,10 @@
     }
 
     function ownershipMain() {
-        rideOwners = {};
-
         if (network.mode === 'server') {
-
+            let storage = context.getParkStorage();
+            rideOwners = storage.get(PARK_STORAGE_KEY, {});
+            storage.set(PARK_STORAGE_KEY, rideOwners);
             context.subscribe('action.query', (e) => {
                 if (e.action !== 'ridecreate') {
                     fixAction(e);
@@ -117,7 +118,7 @@
 
     registerPlugin({
         name: 'ffa-ownership',
-        version: '0.0.7',
+        version: '0.0.8',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
