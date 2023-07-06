@@ -23,6 +23,7 @@
 
     const PLAYER_PROFILES_KEY = 'playerProfiles';
     const RIDE_PROPERTIES_KEY = 'rideProperties';
+    const INITIAL_DOLLARS_KEY = 'initialDollars';
     const MINIMUM_STARTING_DOLLARS = 10000;
     const SETCHEAT = (context.apiVersion > 65) ? ((context.apiVersion >= 74) ? 'cheatset' : 'setcheat') : 'setcheataction';
     const buildActions = [
@@ -106,8 +107,8 @@
             rideProperties = storage.get(RIDE_PROPERTIES_KEY, {});
             storage.set(PLAYER_PROFILES_KEY, playerProfiles);
             storage.set(RIDE_PROPERTIES_KEY, rideProperties);
-
-            initialDollars = Math.max(MINIMUM_STARTING_DOLLARS, park.cash);
+            initialDollars = storage.get(INITIAL_DOLLARS_KEY, Math.max(MINIMUM_STARTING_DOLLARS, park.cash));
+            storage.set(INITIAL_DOLLARS_KEY, initialDollars);
 
             context.subscribe('network.join', (e) => {
                 context.setTimeout(() => network.sendMessage(`{NEWLINE}{YELLOW}This server uses ffa-individual-economy.{NEWLINE}To see your balance at any time, say \`{WHITE}!cash{YELLOW}\` in chat.`, [e.player]), 1000);
@@ -414,7 +415,7 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.8',
+        version: '0.0.9',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',
