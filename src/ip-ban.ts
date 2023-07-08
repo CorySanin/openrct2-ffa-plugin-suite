@@ -42,7 +42,7 @@ interface StatArgs {
                 let ip = newPlayer.ipAddress;
                 if (ip in bannedIPs && !isPlayerAdmin(newPlayer)) {
                     let timeout = bannedIPs[ip] || -1;
-                    network.kickPlayer(getPlayerIndex(newPlayer.id));
+                    network.kickPlayer(newPlayer.id);
                     if (timeout > 0) {
                         sendToAdmins(`Kicked ${newPlayer.name} (${ip}). Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
                     }
@@ -183,18 +183,6 @@ interface StatArgs {
         return network.getPlayer(playerID);
     }
 
-    function getPlayerIndex(player: Player | number): number {
-        let playerID: number = (typeof player === 'number') ? player : player.id;
-        let match: number = -1;
-        network.players.every((p, index) => {
-            if (p.id === playerID) {
-                match = index;
-            }
-            return match === -1;
-        });
-        return match;
-    }
-
     function initializeBannedIps() {
         bannedIPs = {
             null: -1
@@ -248,7 +236,7 @@ interface StatArgs {
             bannedObjects[stat] = ip;
         }
         banIP(ip, time);
-        network.kickPlayer(getPlayerIndex(player));
+        network.kickPlayer(player.id);
     }
 
     function banIP(ip: string, time?: number) {
@@ -326,7 +314,7 @@ interface StatArgs {
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.2.1',
+        version: '0.2.2',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',

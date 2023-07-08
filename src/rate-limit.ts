@@ -40,7 +40,7 @@
                         strikes += 1;
                         if (strikes * 2 >= MAX_STRIKES) {
                             console.log(`kicking ${player.name}`);
-                            network.kickPlayer(getPlayerIndex(player));
+                            network.kickPlayer(player.id);
                             strikes += MAX_STRIKES;
                         }
                         else if (strikes > 1) {
@@ -83,7 +83,7 @@
                             };
                             if (strikes >= MAX_STRIKES) {
                                 console.log(`kicking ${player.name}`);
-                                network.kickPlayer(getPlayerIndex(player));
+                                network.kickPlayer(player.id);
                                 strikes += MAX_STRIKES;
                             }
                             else {
@@ -161,21 +161,9 @@
         return network.getPlayer(playerID);
     }
 
-    function getPlayerIndex(player: Player | number): number {
-        let playerID: number = (typeof player === 'number') ? player : player.id;
-        let match: number = -1;
-        network.players.every((p, index) => {
-            if (p.id === playerID) {
-                match = index;
-            }
-            return match === -1;
-        });
-        return match;
-    }
-
     registerPlugin({
         name: 'ffa-rate-limit',
-        version: '0.0.7',
+        version: '0.0.8',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
