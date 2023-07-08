@@ -40,17 +40,7 @@ interface StatArgs {
             context.subscribe('network.join', e => {
                 let newPlayer = getPlayer(e.player);
                 let ip = newPlayer.ipAddress;
-                if (ip in bannedIPs && !isPlayerAdmin(newPlayer)) {
-                    let timeout = bannedIPs[ip] || -1;
-                    network.kickPlayer(newPlayer.id);
-                    if (timeout > 0) {
-                        sendToAdmins(`Kicked ${newPlayer.name} (${ip}). Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
-                    }
-                    else {
-                        sendToAdmins(`Kicked ${newPlayer.name} (${ip}).`);
-                    }
-                }
-                else {
+                if (!(ip in bannedIPs) || isPlayerAdmin(newPlayer)) {
                     sendToAdmins(`${newPlayer.name}'s IP: ${ip}`);
                 }
             });
@@ -67,7 +57,19 @@ interface StatArgs {
                     if ((args = doesCommandMatch(command, [CMDUNBAN])) !== false) {
                         if (isPlayerAdmin(getPlayer(e.player))) {
                             if (args) {
+                                let match: RegExpExecArray;
                                 args = args.split(' ')[0];
+                                if (match = GUID.exec(args[0] as string)) {
+                                    args = bannedObjects[match[0]];
+                                    delete bannedObjects[match[0]];
+                                }
+                                else {
+                                    for(const b in bannedObjects) {
+                                        if(b === args) {
+                                            delete bannedObjects[b];
+                                        }
+                                    }
+                                }
                                 delete bannedIPs[args];
                                 outmsg = `{YELLOW}Unbanned ${args}!`;
                                 cleanHashes(false);
@@ -82,6 +84,7 @@ interface StatArgs {
                     else if ((args = doesCommandMatch(command, [CMDBAN])) !== false) {
                         if (isPlayerAdmin(getPlayer(e.player)) && (args as string).length > 0) {
                             let t: number;
+                            let match: RegExpExecArray;
                             args = args.split(' ');
                             if ((args as string[]).length > 1) {
                                 t = parseFloat(args[1]);
@@ -89,13 +92,13 @@ interface StatArgs {
                             if (!t) {
                                 t = timeout;
                             }
-                            if ((args[0] as string).match(GUID)) {
-                                banKey(args[0], t);
+                            if (match = GUID.exec(args[0] as string)) {
+                                banKey(match[0], t);
                             }
                             else {
                                 banIP(args[0], t);
                             }
-                            outmsg = `{YELLOW}Banned ${args[0]} for ${t} minutes!`;
+                            outmsg = `{YELLOW}Banned ${match ? match[0] : args[0]} for ${t} minutes!`;
                         }
                     }
                     if (outmsg) {
@@ -119,13 +122,26 @@ interface StatArgs {
             context.registerAction<StatArgs>(ACTION_NAME,
                 (arg: GameActionEventArgs<StatArgs>) => {
                     let player = getPlayer(arg.player);
-                    let stat = arg.args.stat;
-                    if (bannedObjects[stat] in bannedIPs && !(player.ipAddress in bannedIPs)) {
+                    let ip = player.ipAddress;
+                    let rawStat = arg.args.stat;
+                    let stat = rawStat.replace('n-', '');
+                    if (bannedObjects[stat] in bannedIPs && !(ip in bannedIPs)) {
                         sendToAdmins(`${player.name} connected from a new location. New IP is banned.`);
                         banPlayer(player, Math.ceil((bannedIPs[bannedObjects[stat]] - date.ticksElapsed) / TICKS_PER_MINUTE));
                     }
+                    else if (ip in bannedIPs && !isPlayerAdmin(player)) {
+                        let timeout = bannedIPs[ip] || -1;
+                        bannedObjects[stat] = ip;
+                        network.kickPlayer(player.id);
+                        if (timeout > 0) {
+                            sendToAdmins(`Kicked ${player.name} (${ip}). Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
+                        }
+                        else {
+                            sendToAdmins(`Kicked ${player.name} (${ip}).`);
+                        }
+                    }
                     else {
-                        sendToAdmins(`${player.name}'s key: ${stat}`);
+                        sendToAdmins(`${player.name}'s key: ${rawStat}`);
                         PLAYER_OBJECTS[getPlayerGuidKey(player)] = stat;
                     }
                     return ERRRESULT
@@ -149,7 +165,7 @@ interface StatArgs {
                     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
                 });
                 context.sharedStorage.set(STORAGE_KEY, s);
-                return s;
+                return `n-${s}`;
             }
 
             // @ts-ignore
@@ -314,7 +330,7 @@ interface StatArgs {
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.2.2',
+        version: '0.2.3',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
