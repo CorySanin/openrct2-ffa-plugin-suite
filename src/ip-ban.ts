@@ -26,6 +26,7 @@ interface StatArgs {
     function main() {
         timeout = context.sharedStorage.get('ip-ban.timeout', DEFAULT_TIMEOUT);
         if (network.mode === 'server') {
+            const LOG_IN_CHAT = context.sharedStorage.get('ip-ban.log-in-chat', true);
             context.subscribe('action.execute', (e) => {
                 if (e.type === 63) {
                     banPlayersWithGroup(e);
@@ -38,10 +39,12 @@ interface StatArgs {
             });
 
             context.subscribe('network.join', e => {
-                let newPlayer = getPlayer(e.player);
-                let ip = newPlayer.ipAddress;
-                if (!(ip in bannedIPs) || isPlayerAdmin(newPlayer)) {
-                    sendToAdmins(`${newPlayer.name}'s IP: ${ip}`);
+                if (LOG_IN_CHAT) {
+                    let newPlayer = getPlayer(e.player);
+                    let ip = newPlayer.ipAddress;
+                    if (!(ip in bannedIPs) || isPlayerAdmin(newPlayer)) {
+                        sendToAdmins(`${newPlayer.name}'s IP: ${ip}`);
+                    }
                 }
             });
 
@@ -64,8 +67,8 @@ interface StatArgs {
                                     delete bannedObjects[match[0]];
                                 }
                                 else {
-                                    for(const b in bannedObjects) {
-                                        if(b === args) {
+                                    for (const b in bannedObjects) {
+                                        if (b === args) {
                                             delete bannedObjects[b];
                                         }
                                     }
@@ -131,17 +134,20 @@ interface StatArgs {
                     }
                     else if (ip in bannedIPs && !isPlayerAdmin(player)) {
                         let timeout = bannedIPs[ip] || -1;
+                        let ipStr = LOG_IN_CHAT ? `(${ip})` : '..';
                         bannedObjects[stat] = ip;
                         network.kickPlayer(player.id);
                         if (timeout > 0) {
-                            sendToAdmins(`Kicked ${player.name} (${ip}). Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
+                            sendToAdmins(`Kicked ${player.name} ${ipStr}. Time remaining: ${Math.ceil((timeout - date.ticksElapsed) / TICKS_PER_MINUTE)} minutes.`);
                         }
                         else {
-                            sendToAdmins(`Kicked ${player.name} (${ip}).`);
+                            sendToAdmins(`Kicked ${player.name} ${ipStr}.`);
                         }
                     }
                     else {
-                        sendToAdmins(`${player.name}'s key: ${rawStat}`);
+                        if (LOG_IN_CHAT) {
+                            sendToAdmins(`${player.name}'s key: ${rawStat}`);
+                        }
                         PLAYER_OBJECTS[getPlayerGuidKey(player)] = stat;
                     }
                     return ERRRESULT
@@ -330,7 +336,7 @@ interface StatArgs {
 
     registerPlugin({
         name: 'ffa-ip-ban',
-        version: '0.2.3',
+        version: '0.2.4',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',

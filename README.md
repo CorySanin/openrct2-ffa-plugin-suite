@@ -17,7 +17,7 @@ Kicks players for performing too many griefy actions too quickly.
 
 ## ffa-ip-ban
 
-Set a player's group to IP-BAN and they will be kicked and blocked from reconecting until the ban expires. Watch as they try to reconnect but to no avail! The default ban time is 60 minutes but can be adjusted in `plugin.store.json` via `ip-ban.timeout`.
+Set a player's group to IP-BAN and they will be kicked and blocked from reconecting until the ban expires. Watch as they try to reconnect but to no avail! The default ban time is 60 minutes but can be adjusted in `plugin.store.json` via `ip-ban.timeout`. IP's are sent to all server admins by default, but this can be disabled by setting `ip-ban.log-in-chat` to `false`.
 
 ## ffa-cheat-toggle
 
