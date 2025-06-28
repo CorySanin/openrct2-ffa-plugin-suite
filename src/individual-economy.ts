@@ -1,4 +1,5 @@
 /// <reference path="../types/openrct2.d.ts" />
+/// <reference path="../types/string-extensions.d.ts" />
 
 (function () {
     interface PlayerProfile {
@@ -69,20 +70,20 @@
 
     // setTimeout polyfill
     if (typeof context.setTimeout !== 'function') {
-        context.setTimeout = function (callback, delay) {
+        context.setTimeout = function (callback: Function, _) {
             callback();
             return -1;
         }
     }
 
-    function getCommand(str): boolean | string {
+    function getCommand(str: string): false | string {
         if (str.match(PREFIX)) {
             return str.replace(PREFIX, '').trim();
         }
         return false;
     }
 
-    function doesCommandMatch(str, commands): boolean | string {
+    function doesCommandMatch(str: string, commands: (RegExp | string)[]): boolean | string {
         for (const command of commands) {
             if (typeof command === 'string') {
                 if (str.startsWith(command)) {

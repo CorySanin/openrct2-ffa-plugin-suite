@@ -4,7 +4,8 @@
 (function () {
     const TILEWIDTH = 32;
     const PARK_STORAGE_KEY = 'rideOwners';
-    var rideOwners: object;
+    var rideOwners: { [key: number]: string };
+    var ownerNames: { [key: string]: string } = {};
 
     function fixAction(e: GameActionEventArgs) {
         if (e.action === 'trackremove') {
@@ -25,7 +26,7 @@
             let storage = context.getParkStorage();
             rideOwners = storage.get(PARK_STORAGE_KEY, {});
             storage.set(PARK_STORAGE_KEY, rideOwners);
-            context.subscribe('action.query', (e) => {
+            context.subscribe('action.query', (e: GameActionEventArgs<GameActionArgs>) => {
                 if (e.action !== 'ridecreate') {
                     fixAction(e);
                     if ('ride' in e.args && e.player >= 0) {
@@ -36,6 +37,20 @@
                                 errorTitle: 'UNKNOWN USER',
                                 errorMessage: `Could not find user with ID ${e.player}`
                             };
+                        }
+                        else if (e.action === 'ridesetname' && (e = e as GameActionEventArgs<RideSetNameArgs>).args.name.toLowerCase() === '!owner') {
+                            const ownerKey: string | undefined = rideOwners[e.args['ride']];
+                            e.result = {
+                                error: 1,
+                                errorTitle: 'CANCEL',
+                                errorMessage: 'reverting ride name'
+                            };
+                            if (!ownerKey) {
+                                network.sendMessage('That ride belongs to the park.', [e.player]);
+                                return;
+                            }
+                            const name: string | undefined = ownerNames[ownerKey];
+                            network.sendMessage(name ? `That ride belongs to "${name}"` : "The owner of that ride is unknown.", [e.player]);
                         }
                         else if (rideOwners[<number>e.args['ride']] !== player.publicKeyHash && !isPlayerAdmin(player)) {
                             e.result = {
@@ -53,7 +68,7 @@
                 if (e.action === 'ridecreate' &&
                     'ride' in e.result) {
 
-                    var setName = (name, num) => {
+                    var setName = (name: string, num: number) => {
                         context.executeAction('ridesetname', {
                             ride: ride.id,
                             name: `${name} ${num}`
@@ -68,6 +83,7 @@
                         var ride = getRide(<number>e.result['ride']);
                         var player = getPlayer(e.player);
                         rideOwners[ride.id] = player.publicKeyHash;
+                        ownerNames[player.publicKeyHash] = player.name;
 
                         setName(`${player.name} ${ride.name.replace(/[0-9]/g, '').trim()}`, 1);
                     }
@@ -85,7 +101,7 @@
                 '\n' +
                 '    This server uses one or more plugins from the FFA plugin suite.\n' +
                 '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
-                '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' + 
+                '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
                 '\n');
         }
     }
@@ -118,7 +134,7 @@
 
     registerPlugin({
         name: 'ffa-ownership',
-        version: '0.0.8',
+        version: '0.0.9',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
