@@ -1,15 +1,21 @@
 /// <reference path="../types/openrct2.d.ts" />
-// uses OPENRCT2_PLUGIN_API_VERSION = 1
 
-const TILEWIDTH = 32;
-const SLABHEIGHT = 8;
+type Floor = FootpathElement | TrackElement | EntranceElement;
+
+interface TileSurfaces {
+    surface: null | SurfaceElement;
+    floor: null | Floor;
+    elementCount: number
+}
 
 (function () {
-    var entrancePath: null | CoordsXYZ;
+    const TILEWIDTH = 32;
+    const SLABHEIGHT = 8;
+    let entrancePath: null | CoordsXYZ = null;
     function antiGriefMain() {
         if (network.mode === 'server') {
             entrancePath = getEntranceCoords();
-            context.subscribe('action.query', (e) => {
+            context.subscribe('action.query', (e: GameActionEventArgs<GameActionArgs>) => {
                 /**
                  * Do not open rides without paths leading from an exit
                  */
@@ -27,8 +33,8 @@ const SLABHEIGHT = 8;
                  * Only remove path if there isn't an open ride whose exit deposits to this path
                  */
                 else if (e.type === 19) {
-                    var rideUsesPath = doesExitUsePath(e.result.position)
-                    if (doesExitUsePath(e.result.position)) {
+                    const rideUsesPath = doesExitUsePath(e.result.position)
+                    if (rideUsesPath) {
                         e.result = {
                             error: 1,
                             errorTitle: 'EXIT NEEDS PATH',
@@ -49,28 +55,28 @@ const SLABHEIGHT = 8;
                 '\n' +
                 '    This server uses one or more plugins from the FFA plugin suite.\n' +
                 '    https://github.com/CorySanin/Openrct2-ffa-plugin-suite\n' +
-                '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' + 
+                '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
                 '\n');
         }
     }
 
     function doesRideHaveExitPath(rideId) {
-        var ride = getRide(rideId);
+        const ride = getRide(rideId);
         if (ride.classification !== 'ride') {
             return true;
         }
-        var stations = ride.stations;
-        var bad = false;
+        const stations = ride.stations;
+        let bad = false;
         for (var i = 0; i < stations.length && !bad; i++) {
-            var coords = stations[i].exit;
+            const coords = stations[i].exit;
             if (coords) {
-                var checkCoords = {
+                const checkCoords = {
                     x: coords.x / TILEWIDTH + (coords.direction + 1) % 2 * (coords.direction - 1) * -1,
                     y: coords.y / TILEWIDTH + coords.direction % 2 * (coords.direction - 2)
                 }
-                var elements = map.getTile(checkCoords.x, checkCoords.y).elements;
+                const elements = map.getTile(checkCoords.x, checkCoords.y).elements;
                 bad = true;
-                for (var j = 0; j < elements.length; j++) {
+                for (let j = 0; j < elements.length; j++) {
                     if (elements[j].type === 'surface') {
                         let surface = elements[j] as SurfaceElement;
                         if (!surface.hasOwnership && !surface.hasConstructionRights) {
@@ -88,28 +94,28 @@ const SLABHEIGHT = 8;
         return !bad;
     }
 
-    function doesExitUsePath(position) {
-        var pathCoords = {
+    function doesExitUsePath(position: CoordsXYZ) {
+        let pathCoords: CoordsXYZ = {
             x: Math.floor(position.x / TILEWIDTH),
             y: Math.floor(position.y / TILEWIDTH),
             z: position.z / SLABHEIGHT
         }
-        var checkExitCoords;
-        for (var i = 0; i < 4; i++) {
+        let checkExitCoords: CoordsXY;
+        for (let i = 0; i < 4; i++) {
 
             checkExitCoords = {
                 x: pathCoords.x + ((i > 1) ? -1 : 1) * (i % 2),
                 y: pathCoords.y + ((i > 1) ? -1 : 1) * ((i + 1) % 2),
             };
-            var elements = map.getTile(checkExitCoords.x, checkExitCoords.y).elements;
-            for (var k = 0; k < elements.length; k++) {
+            const elements = map.getTile(checkExitCoords.x, checkExitCoords.y).elements;
+            for (let k = 0; k < elements.length; k++) {
                 if (elements[k].type === 'entrance' && 'isQueue' in elements[k] && !elements[k]['isQueue']) {
-                    let entrance = elements[k] as EntranceElement;
+                    const entrance = elements[k] as EntranceElement;
                     if (entrance.object !== 2 // exclude park entrances
                         && pathCoords.x === checkExitCoords.x + (entrance.direction + 1) % 2 * (entrance.direction - 1) * -1
                         && pathCoords.y === checkExitCoords.y + entrance.direction % 2 * (entrance.direction - 2)) {
-                        for (var j = 0; j < 2; j++) {
-                            let ride;
+                        for (let j = 0; j < 2; j++) {
+                            let ride: Ride;
                             if (elements[k].baseHeight === pathCoords.z + (j * 2)
                                 && (ride = getRide(elements[k]['ride'])).status === 'open') {
                                 return ride;
@@ -123,19 +129,19 @@ const SLABHEIGHT = 8;
     }
 
     function getEntranceCoords(): CoordsXYZ {
-        for (var i = 0; i < map.size.x; i++) {
-            for (var j = 0; j < map.size.y; j++) {
-                var tile = map.getTile(i, j);
-                for (var z = 0; z < tile.elements.length; z++) {
+        for (let i = 0; i < map.size.x; i++) {
+            for (let j = 0; j < map.size.y; j++) {
+                const tile: Tile = map.getTile(i, j);
+                for (let z = 0; z < tile.elements.length; z++) {
                     if (tile.elements[z].type == 'entrance' && (<EntranceElement>tile.elements[z]).object === 2) {
-                        var entrace = tile.elements[z] as EntranceElement;
-                        var direction = (entrace.direction + 2) % 4
-                        var checkCoords = {
+                        const entrace = tile.elements[z] as EntranceElement;
+                        const direction: number = (entrace.direction + 2) % 4
+                        const checkCoords: CoordsXY = {
                             x: i + (direction + 1) % 2 * (direction - 1) * -1,
                             y: j + direction % 2 * (direction - 2)
                         };
-                        var elements = map.getTile(checkCoords.x, checkCoords.y).elements;
-                        for (var k = 0; k < elements.length; k++) {
+                        const elements = map.getTile(checkCoords.x, checkCoords.y).elements;
+                        for (let k = 0; k < elements.length; k++) {
                             if (elements[k].type === 'footpath' && (elements[k].baseHeight === entrace.baseZ / SLABHEIGHT || elements[k].baseHeight + 2 === entrace.baseZ / SLABHEIGHT)) {
                                 return {
                                     x: checkCoords.x * TILEWIDTH,
@@ -152,23 +158,53 @@ const SLABHEIGHT = 8;
         return null;
     }
 
+    function pathSlopeToSurfaceSlope(slope: number | null): number {
+        if (slope === null) {
+            return 0;
+        }
+        return ([12, 9, 3, 6])[slope];
+    }
+
     function findLostGuests() {
         if (entrancePath != null && context.apiVersion >= 66) {
-            var peeps = map.getAllEntities((date.day % 2) ? 'guest' : 'staff');
-            var lostPeeps = [];
-            peeps.forEach(peep => {
-                var elements = map.getTile(Math.floor(peep.x / TILEWIDTH), Math.floor(peep.y / TILEWIDTH)).elements;
-                var pathIndex = -1;
-                var surface: null | SurfaceElement = null;
-                for (var i = 0; i < elements.length; i++) {
-                    if ((elements[i].type === 'footpath' || elements[i].type === 'entrance' || elements[i].type === 'track') && elements[i].baseHeight <= peep.z / SLABHEIGHT) {
-                        pathIndex = i;
-                    }
-                    else if (elements[i].type === 'surface') {
-                        surface = elements[i] as SurfaceElement;
-                    }
+            const peeps: Guest[] | Staff[] = (date.day % 2) ? map.getAllEntities('guest') : map.getAllEntities('staff');
+            const lostPeeps: typeof peeps = [];
+            const memoizedSurfaces: { [key: string]: TileSurfaces } = {};
+            peeps.forEach((peep: Staff & Guest) => {
+                const coords: CoordsXY = {
+                    x: Math.floor(peep.x / TILEWIDTH),
+                    y: Math.floor(peep.y / TILEWIDTH)
+                };
+                const coordKey = `${coords.x},${coords.y}`;
+                const peepBaseHeight = peep.z / SLABHEIGHT;
+                if (!(coordKey in memoizedSurfaces)) {
+                    const elements = map.getTile(coords.x, coords.y).elements;
+                    let floor: null | FootpathElement | TrackElement | EntranceElement = null;
+                    let surface: null | SurfaceElement = null;
+                    elements.forEach(el => {
+                        if (el.type === 'surface') {
+                            surface = el as SurfaceElement;
+                        }
+                    });
+                    elements.forEach((el, i: number) => {
+                        if (!surface.hasOwnership && el.type === 'footpath' && surface.baseHeight === el.baseHeight && surface.slope === pathSlopeToSurfaceSlope(el.slopeDirection)) {
+                            return;
+                        }
+                        if ((el.type !== 'footpath' && el.type !== 'entrance' && el.type !== 'track')) {
+                            return;
+                        }
+                        if (floor === null || floor.baseHeight > el.baseHeight) {
+                            floor = el;
+                        }
+                    });
+                    memoizedSurfaces[coordKey] = {
+                        surface,
+                        floor,
+                        elementCount: elements.length
+                    };
                 }
-                if (elements.length !== 0 && pathIndex === -1 && (surface.hasOwnership || surface.hasConstructionRights)) {
+                const surfaces: TileSurfaces = memoizedSurfaces[coordKey];
+                if (surfaces.elementCount !== 0 && (surfaces.floor === null || surfaces.floor.baseHeight > peepBaseHeight) && (surfaces.surface.hasOwnership || surfaces.surface.hasConstructionRights)) {
                     lostPeeps.push(peep);
                 }
             });
@@ -176,9 +212,9 @@ const SLABHEIGHT = 8;
         }
     }
 
-    function relocateLostGuests(peeps: Entity[]) {
+    function relocateLostGuests(peeps: Guest[] | Staff[]) {
         if (peeps && peeps.length) {
-            var peep = peeps.pop();
+            let peep = peeps.pop();
             context.executeAction("peeppickup", {
                 type: 0,
                 id: peep.id,
@@ -200,7 +236,7 @@ const SLABHEIGHT = 8;
     }
 
     function isPlayerAdmin(player: Player) {
-        var perms: string[] = network.getGroup(player.group).permissions;
+        let perms: string[] = network.getGroup(player.group).permissions;
         return perms.indexOf('kick_player') >= 0;
     }
 
@@ -208,8 +244,8 @@ const SLABHEIGHT = 8;
         if (rideID === -1) {
             return null;
         }
-        var ride: Ride = null;
-        var rides = map.rides;
+        const rides = map.rides;
+        let ride: Ride = null;
         for (const r of rides) {
             if (r.id === rideID) {
                 ride = r;
@@ -220,7 +256,7 @@ const SLABHEIGHT = 8;
 
     registerPlugin({
         name: 'ffa-anti-grief',
-        version: '0.0.7',
+        version: '0.0.8',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
