@@ -2,8 +2,10 @@
 // uses OPENRCT2_PLUGIN_API_VERSION = 1
 
 (function () {
+    type RenameCommand = 'owner' | 'release';
     const TILEWIDTH = 32;
     const PARK_STORAGE_KEY = 'rideOwners';
+    const RELEASED = 'released';
     var rideOwners: { [key: number]: string };
     var ownerNames: { [key: string]: string } = {};
 
@@ -21,6 +23,21 @@
         }
     }
 
+    function getRenameCommand(e: GameActionEventArgs<RideSetNameArgs>): false | RenameCommand {
+        const newName = e.args.name.toLowerCase();
+        if (['!', '/'].indexOf(newName.charAt(0)) < 0) {
+            return false;
+        }
+        const commandStr = newName.substring(1);
+        switch (commandStr) {
+            case "owner":
+            case "release":
+                return commandStr;
+            default:
+                return false;
+        }
+    }
+
     function ownershipMain() {
         if (network.mode === 'server') {
             let storage = context.getParkStorage();
@@ -31,6 +48,7 @@
                     fixAction(e);
                     if ('ride' in e.args && e.player >= 0) {
                         let player = getPlayer(e.player);
+                        let cmd: RenameCommand | false = false;
                         if (player == null) {
                             e.result = {
                                 error: 1,
@@ -38,7 +56,7 @@
                                 errorMessage: `Could not find user with ID ${e.player}`
                             };
                         }
-                        else if (e.action === 'ridesetname' && (e = e as GameActionEventArgs<RideSetNameArgs>).args.name.toLowerCase() === '!owner') {
+                        else if (e.action === 'ridesetname' && (cmd = getRenameCommand(e = e as GameActionEventArgs<RideSetNameArgs>)) && cmd === 'owner') {
                             const ownerKey: string | undefined = rideOwners[e.args['ride']];
                             e.result = {
                                 error: 1,
@@ -52,13 +70,21 @@
                             const name: string | undefined = ownerNames[ownerKey];
                             network.sendMessage(name ? `That ride belongs to "${name}"` : "The owner of that ride is unknown.", [e.player]);
                         }
-                        else if (rideOwners[<number>e.args['ride']] !== player.publicKeyHash && !isPlayerAdmin(player)) {
+                        else if (rideOwners[<number>e.args['ride']] !== RELEASED && rideOwners[<number>e.args['ride']] !== player.publicKeyHash && !isPlayerAdmin(player)) {
                             e.result = {
                                 error: 1,
                                 errorTitle: 'NOT OWNED',
                                 errorMessage: 'That ride belongs to another player.'
-                            }
+                            };
                             network.sendMessage('{RED}ERROR: {WHITE}That ride/stall doesn\'t belong to you!', [e.player]);
+                        }
+                        else if (cmd === 'release') {
+                            e.result = {
+                                error: 1,
+                                errorTitle: 'CANCEL',
+                                errorMessage: 'reverting ride name'
+                            };
+                            rideOwners[e.args['ride'] as number] = RELEASED;
                         }
                     }
                 }
@@ -134,7 +160,7 @@
 
     registerPlugin({
         name: 'ffa-ownership',
-        version: '0.0.9',
+        version: '0.0.10',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
