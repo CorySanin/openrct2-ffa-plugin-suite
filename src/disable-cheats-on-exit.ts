@@ -91,8 +91,8 @@
     }
 
     registerPlugin({
-        name: 'disable-cheats-on-exit',
-        version: '0.1.0',
+        name: 'ffa-disable-cheats-on-exit',
+        version: '0.1.1',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'MIT',
