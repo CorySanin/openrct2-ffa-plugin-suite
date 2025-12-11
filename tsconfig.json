@@ -5,7 +5,8 @@
         ],
         "target": "ES5",
         "module": "CommonJS",
-        "moduleResolution": "Node",
+        "moduleResolution": "node10",
+        "ignoreDeprecations": "6.0",
         "removeComments": true,
         "outDir": "lib"
     },

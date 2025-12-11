@@ -46,9 +46,10 @@ interface TileSurfaces {
             });
 
             context.subscribe('interval.day', findLostGuests);
+            return;
         }
         // @ts-ignore
-        else if (typeof FFAPLUGINMSG === 'undefined') {
+        if (typeof FFAPLUGINMSG === 'undefined') {
             // @ts-ignore
             FFAPLUGINMSG = true;
             console.log(
@@ -58,6 +59,14 @@ interface TileSurfaces {
                 '    Found a bug? Please create an issue on GitHub with reproducible steps. Please and thank you!' +
                 '\n');
         }
+
+        context.subscribe('action.location', (e) => {
+            if (ui.tool?.cursor === 'path_down' && ui.tileSelection?.range?.leftTop &&
+                (ui.tileSelection.range.leftTop.x !== ui.tileSelection.range.rightBottom.x || ui.tileSelection.range.leftTop.y !== ui.tileSelection.range.rightBottom.y)) {
+                ui.tool.cancel();
+                ui.showError('Can\'t drag area:', 'That tool is banned on this server.');
+            }
+        });
     }
 
     function doesRideHaveExitPath(rideId) {
@@ -256,7 +265,7 @@ interface TileSurfaces {
 
     registerPlugin({
         name: 'ffa-anti-grief',
-        version: '0.0.8',
+        version: '0.0.9',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',
