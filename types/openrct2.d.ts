@@ -844,11 +844,10 @@ declare global {
         /** Surface object */
         object: number;
         railingsObject: number;
-        /**
-         * - `0`: Flat
-         * - `4`, `5`, `6`, `7`: Slope direction + 4
-         */
-        slope: number;
+        /** 0 if flat, 1 if sloped */
+        slopeType: number; // 
+        /** direction if sloped, otherwise ignored */
+        slopeDirection: Direction;
         constructFlags: number;
     }
 
@@ -1115,7 +1114,7 @@ declare global {
          * @see `ShopItem` in {@link https://github.com/OpenRCT2/OpenRCT2/blob/develop/src/openrct2/ride/ShopItem.h}
          */
         item: number;
-        numweeks: number;
+        duration: number;
     }
 
     interface ParkSetDateArgs extends GameActionArgs {
@@ -1218,6 +1217,7 @@ declare global {
         entranceObject: number;
         colour1: number;
         colour2: number;
+        inspectionInterval: number;
     }
 
     interface RideDemolishArgs extends GameActionArgs {
@@ -2308,6 +2308,12 @@ declare global {
 
         /**
          * Various flags related to the operation of the ride.
+         */
+        flags: number;
+
+        /**
+         * Old name of ‘flags’ property
+         * @deprecated
          */
         lifecycleFlags: number;
 

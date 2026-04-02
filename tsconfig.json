@@ -1,24 +1,19 @@
 {
     "compilerOptions": {
-        "lib": [
-            "es5"
-        ],
+        "lib": ["es5"],
         "target": "ES5",
         "module": "CommonJS",
-        "moduleResolution": "node10",
-        "ignoreDeprecations": "6.0",
+        "moduleResolution": "Node",
+        "typeRoots": ["types"],
         "removeComments": true,
+        "rootDir": "./src",
         "outDir": "lib"
     },
-    "files": [
-        "src/anti-grief.ts",
-        "src/cheat-toggle.ts",
-        "src/disable-cheats-on-exit.ts",
-        "src/disable-track-designs.ts",
-        "src/individual-economy.ts",
-        "src/ip-ban.ts",
-        "src/ownership.ts",
-        "src/quit-on-title.ts",
-        "src/rate-limit.ts",
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "src/land-claim.ts",
+        "src/common.ts"
     ]
 }
