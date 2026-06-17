@@ -1,4 +1,4 @@
-/// <reference path="../types/openrct2.d.ts" />
+/// <reference path="../node_modules/@openrct2/types/openrct2.d.ts" />
 /// <reference path="../types/string-extensions.d.ts" />
 
 (function () {
@@ -117,7 +117,7 @@
 
             context.subscribe('action.query', (e) => {
                 // check if player has the CASH MONEY
-                if ('cost' in e.result && e.result.cost >= 0 && e.player !== -1) {
+                if ('cost' in e.result && typeof e.result.cost === 'number' && e.result.cost >= 0 && e.player !== -1) {
                     var playerCash = getPlayerCash(e.player);
                     if (buildActions.indexOf(e.action) >= 0) {
                         setParkCash(playerCash);
@@ -133,7 +133,7 @@
                     if (e.action === 'ridedemolish' &&
                         'ride' in e.args) {
                         var r = <number>e.args['ride'];
-                        rideProperties[r].previousTotalProfit = getRide(r).totalProfit;
+                        rideProperties[r].previousTotalProfit = getRide(r)?.totalProfit || 0;
                     }
                 }
             });
@@ -153,7 +153,7 @@
                     }
 
                     // deduct the money
-                    if ('cost' in e.result) {
+                    if ('cost' in e.result && typeof e.result.cost === 'number') {
                         spendMoney(player, e.result.cost);
                         if (buildActions.indexOf(e.action) >= 0) {
                             setParkCash(getPlayerCash(e.player));
@@ -162,9 +162,9 @@
                 }
             });
 
-            context.subscribe('interval.day', (e) => {
-                if (park.cash <= 0) {
-                    setParkCash(initialDollars);
+            context.subscribe('interval.day', () => {
+                if (park.cash <= context.sharedStorage.get('economy.minimum', 1000)) {
+                    setParkCash(context.sharedStorage.get('economy.hydrate', initialDollars));
                 }
                 if (date.day === 1) {
                     var mostProfitableTotal = {
@@ -230,7 +230,7 @@
 
             context.subscribe('network.chat', (e) => {
                 let msg = e.message;
-                let outmsg: string, args: any, command = getCommand(msg);
+                let outmsg: string | null = null, args: any, command = getCommand(msg);
                 if (command !== false) {
 
                     if ((args = doesCommandMatch(command, [CMDCASH])) !== false) {
@@ -241,7 +241,7 @@
                         let lastspace = a.lastIndexOf(' ');
                         args = [a.substring(0, lastspace), a.substring(lastspace + 1)];
                         if (args.length === 2) {
-                            let recipient: number = null;
+                            let recipient: number | null = null;
                             network.players.every(p => {
                                 if (p.name === args[0]) {
                                     recipient = p.id;
@@ -277,8 +277,8 @@
                         }
                     }
 
-                    if (outmsg) {
-                        context.setTimeout(() => network.sendMessage(outmsg, [e.player]), 100);
+                    if (typeof outmsg === 'string') {
+                        context.setTimeout(() => network.sendMessage(outmsg!, [e.player]), 100);
                     }
                 }
             });
@@ -294,7 +294,7 @@
         }
     }
 
-    function getPlayer(playerID: number): Player {
+    function getPlayer(playerID: number) {
         if (playerID === -1) {
             return null;
         }
@@ -314,11 +314,11 @@
         return p;
     }
 
-    function getRide(rideID: number): Ride {
+    function getRide(rideID: number) {
         if (rideID === -1) {
             return null;
         }
-        var ride: Ride = null;
+        var ride: Ride | null = null;
         var rides = map.rides;
         for (const r of rides) {
             if (r.id === rideID) {
@@ -339,7 +339,10 @@
 
     function spendMoney(player: number | string, cost: number) {
         if (!park.getFlag('noMoney') && player !== null) {
-            playerProfiles[(typeof player === 'number') ? getPlayer(player).publicKeyHash : player].moneySpent += cost;
+            const key = (typeof player === 'number') ? getPlayer(player)?.publicKeyHash || '' : player;
+            if (key in playerProfiles) {
+                playerProfiles[key].moneySpent += cost;
+            }
         }
     }
 
@@ -362,7 +365,7 @@
     function getRideProfit(rideID: number): number {
         var ride = getRide(rideID);
         // Don't subtract funds if it's a bathroom 🚽
-        return Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit);
+        return (ride && Math.max(ride.totalProfit, (ride.type === 36) ? 0 : ride.totalProfit)) || 0;
     }
 
     function getProfitDifference(playerHash: string): number {
@@ -373,7 +376,7 @@
     }
 
     function getRideProfitDifference(rideID: number): number {
-        var profit = getRide(rideID).totalProfit;
+        var profit = getRide(rideID)?.totalProfit || 0;
         var previous = rideProperties[rideID].previousTotalProfit;
         rideProperties[rideID].previousTotalProfit = profit;
         return profit - previous;
@@ -381,6 +384,9 @@
 
     function addRide(playerID: number, rideID: number) {
         var player = getPlayer(playerID);
+        if (!player) {
+            return;
+        }
         if (playerProfiles[player.publicKeyHash].ridesCreated.indexOf(rideID) === -1) {
             playerProfiles[player.publicKeyHash].ridesCreated.push(rideID);
         }
@@ -416,7 +422,7 @@
 
     registerPlugin({
         name: 'ffa-individual-economy',
-        version: '0.0.9',
+        version: '0.0.10',
         minApiVersion: 2,
         authors: ['Cory Sanin'],
         type: 'remote',
