@@ -1,4 +1,4 @@
-/// <reference path="../types/openrct2.d.ts" />
+/// <reference path="../node_modules/@openrct2/types/openrct2.d.ts" />
 
 type Floor = FootpathElement | TrackElement | EntranceElement;
 
@@ -15,7 +15,7 @@ interface TileSurfaces {
     function antiGriefMain() {
         if (network.mode === 'server') {
             entrancePath = getEntranceCoords();
-            context.subscribe('action.query', (e: GameActionEventArgs<GameActionArgs>) => {
+            context.subscribe('action.query', (e: GameActionEventArgs<RideSetStatusArgs>) => {
                 /**
                  * Do not open rides without paths leading from an exit
                  */
@@ -26,14 +26,14 @@ interface TileSurfaces {
                             errorTitle: 'NO EXIT',
                             errorMessage: 'Ride has no exit path.'
                         }
-                        network.sendMessage(`{RED}ERROR: {WHITE}${getRide(e.args['ride']).name} has no path leading from its exit!`, [e.player]);
+                        network.sendMessage(`{RED}ERROR: {WHITE}${getRide(e.args['ride'])?.name} has no path leading from its exit!`, [e.player]);
                     }
                 }
                 /**
                  * Only remove path if there isn't an open ride whose exit deposits to this path
                  */
                 else if (e.type === 19) {
-                    const rideUsesPath = doesExitUsePath(e.result.position)
+                    const rideUsesPath = e.result.position && doesExitUsePath(e.result.position)
                     if (rideUsesPath) {
                         e.result = {
                             error: 1,
@@ -69,9 +69,9 @@ interface TileSurfaces {
         });
     }
 
-    function doesRideHaveExitPath(rideId) {
+    function doesRideHaveExitPath(rideId: number) {
         const ride = getRide(rideId);
-        if (ride.classification !== 'ride') {
+        if (ride?.classification !== 'ride') {
             return true;
         }
         const stations = ride.stations;
@@ -118,15 +118,15 @@ interface TileSurfaces {
             };
             const elements = map.getTile(checkExitCoords.x, checkExitCoords.y).elements;
             for (let k = 0; k < elements.length; k++) {
-                if (elements[k].type === 'entrance' && 'isQueue' in elements[k] && !elements[k]['isQueue']) {
+                if (elements[k].type === 'entrance') {
                     const entrance = elements[k] as EntranceElement;
                     if (entrance.object !== 2 // exclude park entrances
                         && pathCoords.x === checkExitCoords.x + (entrance.direction + 1) % 2 * (entrance.direction - 1) * -1
                         && pathCoords.y === checkExitCoords.y + entrance.direction % 2 * (entrance.direction - 2)) {
                         for (let j = 0; j < 2; j++) {
-                            let ride: Ride;
-                            if (elements[k].baseHeight === pathCoords.z + (j * 2)
-                                && (ride = getRide(elements[k]['ride'])).status === 'open') {
+                            let ride: Ride | null = null;
+                            if (entrance.baseHeight === pathCoords.z + (j * 2)
+                                && (ride = getRide(entrance.ride))?.status === 'open') {
                                 return ride;
                             }
                         }
@@ -137,7 +137,7 @@ interface TileSurfaces {
         return false;
     }
 
-    function getEntranceCoords(): CoordsXYZ {
+    function getEntranceCoords(): CoordsXYZ | null {
         for (let i = 0; i < map.size.x; i++) {
             for (let j = 0; j < map.size.y; j++) {
                 const tile: Tile = map.getTile(i, j);
@@ -176,10 +176,10 @@ interface TileSurfaces {
 
     function findLostGuests() {
         if (entrancePath != null && context.apiVersion >= 66) {
-            const peeps: Guest[] | Staff[] = (date.day % 2) ? map.getAllEntities('guest') : map.getAllEntities('staff');
+            const peeps = (date.day % 2) ? map.getAllEntities('guest') : map.getAllEntities('staff');
             const lostPeeps: typeof peeps = [];
             const memoizedSurfaces: { [key: string]: TileSurfaces } = {};
-            peeps.forEach((peep: Staff & Guest) => {
+            peeps.forEach((peep: Staff | Guest) => {
                 const coords: CoordsXY = {
                     x: Math.floor(peep.x / TILEWIDTH),
                     y: Math.floor(peep.y / TILEWIDTH)
@@ -196,7 +196,7 @@ interface TileSurfaces {
                         }
                     });
                     elements.forEach((el, i: number) => {
-                        if (!surface.hasOwnership && el.type === 'footpath' && surface.baseHeight === el.baseHeight && surface.slope === pathSlopeToSurfaceSlope(el.slopeDirection)) {
+                        if (!surface?.hasOwnership && el.type === 'footpath' && surface?.baseHeight === el.baseHeight && surface.slope === pathSlopeToSurfaceSlope(el.slopeDirection)) {
                             return;
                         }
                         if ((el.type !== 'footpath' && el.type !== 'entrance' && el.type !== 'track')) {
@@ -213,8 +213,8 @@ interface TileSurfaces {
                     };
                 }
                 const surfaces: TileSurfaces = memoizedSurfaces[coordKey];
-                if (surfaces.elementCount !== 0 && (surfaces.floor === null || surfaces.floor.baseHeight > peepBaseHeight) && (surfaces.surface.hasOwnership || surfaces.surface.hasConstructionRights)) {
-                    lostPeeps.push(peep);
+                if (surfaces.elementCount !== 0 && (surfaces.floor === null || surfaces.floor.baseHeight > peepBaseHeight) && (surfaces?.surface?.hasOwnership || surfaces?.surface?.hasConstructionRights)) {
+                    lostPeeps.push(peep as Guest & Staff);
                 }
             });
             relocateLostGuests(lostPeeps);
@@ -224,7 +224,7 @@ interface TileSurfaces {
     function relocateLostGuests(peeps: Guest[] | Staff[]) {
         if (peeps && peeps.length) {
             let peep = peeps.pop();
-            context.executeAction("peeppickup", {
+            peep && context.executeAction("peeppickup", {
                 type: 0,
                 id: peep.id,
                 x: -32768,
@@ -232,7 +232,7 @@ interface TileSurfaces {
                 z: 0,
                 playerId: 0
             }, () => {
-                context.executeAction("peeppickup", {
+                entrancePath && context.executeAction("peeppickup", {
                     type: 2,
                     id: peep.id,
                     x: entrancePath.x,
@@ -249,12 +249,12 @@ interface TileSurfaces {
         return perms.indexOf('kick_player') >= 0;
     }
 
-    function getRide(rideID: number): Ride {
+    function getRide(rideID: number) {
         if (rideID === -1) {
             return null;
         }
         const rides = map.rides;
-        let ride: Ride = null;
+        let ride: Ride | null = null;
         for (const r of rides) {
             if (r.id === rideID) {
                 ride = r;
@@ -265,7 +265,7 @@ interface TileSurfaces {
 
     registerPlugin({
         name: 'ffa-anti-grief',
-        version: '0.0.9',
+        version: '0.0.10',
         authors: ['Cory Sanin'],
         type: 'remote',
         licence: 'GPL-3.0',

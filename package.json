@@ -3,14 +3,14 @@
   "version": "0.0.1",
   "scripts": {
     "build:types": "npm exec tsc",
-    "build": "npm run build:types",
-    "gettypes": "curl https://raw.githubusercontent.com/OpenRCT2/OpenRCT2/develop/distribution/openrct2.d.ts > types/openrct2.d.ts"
+    "build": "npm run build:types"
   },
   "description": "Free for all plugin suite for OpenRCT2 multiplayer",
   "main": "lib/ownership.js",
   "author": "Cory Sanin",
   "license": "GPL-3.0",
   "devDependencies": {
+    "@openrct2/types": "^0.5.2",
     "typescript": "5.8.3"
   }
 }
